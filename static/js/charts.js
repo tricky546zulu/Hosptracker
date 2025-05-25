@@ -124,10 +124,10 @@ function initializeCapacityChart() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 100,
+                    max: 80,
                     ticks: {
                         callback: function(value) {
-                            return value + '%';
+                            return value + ' patients';
                         }
                     }
                 }
@@ -144,13 +144,9 @@ function initializeCapacityChart() {
                             const data = hospitalData[hospitalCode];
                             
                             if (data) {
-                                return [
-                                    `Capacity: ${context.parsed.y.toFixed(1)}%`,
-                                    `Occupied: ${data.occupied_beds || 0}/${data.total_beds || 0} beds`,
-                                    `Admitted in ED: ${data.admitted_pts_in_ed || 0}`
-                                ];
+                                return `Total Patients: ${data.total_patients || 0}`;
                             }
-                            return `Capacity: ${context.parsed.y.toFixed(1)}%`;
+                            return `Total Patients: ${context.parsed.y}`;
                         }
                     }
                 }
@@ -168,7 +164,7 @@ function initializeTrendsChart() {
         data: {
             labels: [],
             datasets: [{
-                label: 'Capacity %',
+                label: 'Total Patients',
                 data: [],
                 borderColor: 'rgba(75, 192, 192, 1)',
                 backgroundColor: 'rgba(75, 192, 192, 0.1)',
@@ -192,10 +188,10 @@ function initializeTrendsChart() {
                 },
                 y: {
                     beginAtZero: true,
-                    max: 100,
+                    max: 80,
                     ticks: {
                         callback: function(value) {
-                            return value + '%';
+                            return value + ' patients';
                         }
                     }
                 }
@@ -207,7 +203,7 @@ function initializeTrendsChart() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `Capacity: ${context.parsed.y.toFixed(1)}%`;
+                            return `Total Patients: ${context.parsed.y}`;
                         }
                     }
                 }
@@ -221,23 +217,23 @@ function updateCapacityChart() {
     if (!capacityChart) return;
     
     const hospitals = ['RUH', 'SPH', 'SCH'];
-    const capacityData = hospitals.map(hospital => {
+    const totalPatientsData = hospitals.map(hospital => {
         const data = hospitalData[hospital];
-        return data ? (data.capacity_percentage || 0) : 0;
+        return data ? (data.total_patients || 0) : 0;
     });
     
-    capacityChart.data.datasets[0].data = capacityData;
+    capacityChart.data.datasets[0].data = totalPatientsData;
     
-    // Update bar colors based on capacity levels
-    capacityChart.data.datasets[0].backgroundColor = capacityData.map(percentage => {
-        if (percentage >= 90) return 'rgba(220, 53, 69, 0.8)';
-        if (percentage >= 75) return 'rgba(255, 193, 7, 0.8)';
+    // Update bar colors based on patient counts
+    capacityChart.data.datasets[0].backgroundColor = totalPatientsData.map(count => {
+        if (count >= 40) return 'rgba(220, 53, 69, 0.8)';
+        if (count >= 20) return 'rgba(255, 193, 7, 0.8)';
         return 'rgba(25, 135, 84, 0.8)';
     });
     
-    capacityChart.data.datasets[0].borderColor = capacityData.map(percentage => {
-        if (percentage >= 90) return 'rgba(220, 53, 69, 1)';
-        if (percentage >= 75) return 'rgba(255, 193, 7, 1)';
+    capacityChart.data.datasets[0].borderColor = totalPatientsData.map(count => {
+        if (count >= 40) return 'rgba(220, 53, 69, 1)';
+        if (count >= 20) return 'rgba(255, 193, 7, 1)';
         return 'rgba(25, 135, 84, 1)';
     });
     
@@ -255,10 +251,10 @@ function updateTrendsChart(data) {
     if (!trendsChart) return;
     
     const labels = data.map(item => new Date(item.timestamp));
-    const capacityData = data.map(item => item.capacity_percentage || 0);
+    const totalPatientsData = data.map(item => item.total_patients || 0);
     
     trendsChart.data.labels = labels;
-    trendsChart.data.datasets[0].data = capacityData;
+    trendsChart.data.datasets[0].data = totalPatientsData;
     
     // Update chart title to show selected hospital
     const hospitalName = getFullHospitalName(currentTrendHospital);
