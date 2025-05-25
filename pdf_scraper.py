@@ -339,10 +339,7 @@ class HospitalDataScraper:
                     capacity = HospitalCapacity(
                         hospital_code=data['hospital_code'],
                         hospital_name=data['hospital_name'],
-                        occupied_beds=data.get('occupied_beds'),
-                        total_beds=data.get('total_beds'),
-                        capacity_percentage=data.get('capacity_percentage'),
-                        admitted_pts_in_ed=data.get('admitted_pts_in_ed'),
+                        total_patients=data.get('total_patients'),
                         timestamp=datetime.utcnow()
                     )
                     db.session.add(capacity)
