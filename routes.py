@@ -66,10 +66,7 @@ def get_hospital_history(hospital_code):
         for record in history:
             history_data.append({
                 'timestamp': record.timestamp.isoformat(),
-                'occupied_beds': record.occupied_beds or 0,
-                'total_beds': record.total_beds or 0,
-                'capacity_percentage': record.capacity_percentage or 0,
-                'admitted_pts_in_ed': record.admitted_pts_in_ed or 0
+                'total_patients': record.total_patients or 0
             })
         
         return jsonify({
