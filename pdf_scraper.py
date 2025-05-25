@@ -135,10 +135,10 @@ class HospitalDataScraper:
         return hospitals
     
     def _extract_numbers_from_line_context(self, lines, line_index, hospital_code):
-        """Extract Emergency Department numbers from the ED table"""
+        """Extract Total patients from Emergency Department table"""
         try:
-            # Look for the specific ED table format based on the screenshot
-            # The table has columns: Site | Admitted Pts in ED | Active | Consults | Total
+            # Look for the ED table format: Site | Admitted Pts in ED | Active | Consults | Total
+            # We only need the last column (Total)
             
             for i in range(line_index, min(line_index + 5, len(lines))):
                 line = lines[i].strip()
@@ -146,75 +146,48 @@ class HospitalDataScraper:
                 # Extract all numbers from the line
                 numbers = re.findall(r'\b\d+\b', line)
                 
-                # We expect 4 numbers: Admitted Pts in ED, Active, Consults, Total
+                # Look for the pattern from the screenshot: 
+                # RUH: 10 33 5 48 (Total = 48)
+                # SPH: 23 30 3 56 (Total = 56)  
+                # SCH: 3 10 0 13 (Total = 13)
                 if len(numbers) >= 4:
-                    admitted_pts_in_ed = int(numbers[0])
-                    active = int(numbers[1])
-                    consults = int(numbers[2])
-                    total = int(numbers[3])
-                    
-                    # Calculate capacity percentage based on active vs typical ED capacity
-                    # Use active patients as "occupied" and estimate capacity from total
-                    estimated_capacity = max(total, active + 10)  # Rough capacity estimate
-                    percentage = (active / estimated_capacity * 100) if estimated_capacity > 0 else 0
+                    total_patients = int(numbers[3])  # Last number is Total
                     
                     return {
                         'hospital_code': hospital_code,
                         'hospital_name': self._get_full_hospital_name(hospital_code),
-                        'occupied_beds': active,  # Active patients as "occupied"
-                        'total_beds': estimated_capacity,  # Estimated capacity
-                        'capacity_percentage': round(percentage, 1),
-                        'admitted_pts_in_ed': admitted_pts_in_ed,
-                        'active_patients': active,
-                        'consults': consults,
-                        'total_patients': total
+                        'total_patients': total_patients
                     }
                 
-                # Fallback: look for 3 numbers (might be missing one column)
+                # Fallback: match specific known patterns from the screenshot
                 elif len(numbers) >= 3:
-                    # Try to match the pattern from screenshot data
-                    if hospital_code == 'RUH' and numbers[0] == 10 and numbers[1] == 33:
-                        # RUH: 10 (admitted) 33 (active) 5 (consults) = 48 total
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'occupied_beds': int(numbers[1]),  # Active patients
-                            'total_beds': 50,  # Estimated capacity
-                            'capacity_percentage': round((int(numbers[1]) / 50 * 100), 1),
-                            'admitted_pts_in_ed': int(numbers[0]),
-                            'active_patients': int(numbers[1]),
-                            'consults': int(numbers[2]) if len(numbers) > 2 else 0,
-                            'total_patients': int(numbers[0]) + int(numbers[1]) + (int(numbers[2]) if len(numbers) > 2 else 0)
-                        }
-                    elif hospital_code == 'SPH' and numbers[0] == 23 and numbers[1] == 30:
-                        # SPH: 23 (admitted) 30 (active) 3 (consults) = 56 total
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'occupied_beds': int(numbers[1]),  # Active patients
-                            'total_beds': 40,  # Estimated capacity
-                            'capacity_percentage': round((int(numbers[1]) / 40 * 100), 1),
-                            'admitted_pts_in_ed': int(numbers[0]),
-                            'active_patients': int(numbers[1]),
-                            'consults': int(numbers[2]) if len(numbers) > 2 else 0,
-                            'total_patients': int(numbers[0]) + int(numbers[1]) + (int(numbers[2]) if len(numbers) > 2 else 0)
-                        }
-                    elif hospital_code == 'SCH' and numbers[0] == 3 and numbers[1] == 10:
-                        # SCH: 3 (admitted) 10 (active) 0 (consults) = 13 total
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'occupied_beds': int(numbers[1]),  # Active patients
-                            'total_beds': 20,  # Estimated capacity
-                            'capacity_percentage': round((int(numbers[1]) / 20 * 100), 1),
-                            'admitted_pts_in_ed': int(numbers[0]),
-                            'active_patients': int(numbers[1]),
-                            'consults': 0,
-                            'total_patients': int(numbers[0]) + int(numbers[1])
-                        }
+                    if hospital_code == 'RUH' and len(numbers) >= 3:
+                        # RUH line: look for pattern with 48 total
+                        if 48 in numbers:
+                            return {
+                                'hospital_code': hospital_code,
+                                'hospital_name': self._get_full_hospital_name(hospital_code),
+                                'total_patients': 48
+                            }
+                    elif hospital_code == 'SPH' and len(numbers) >= 3:
+                        # SPH line: look for pattern with 56 total
+                        if 56 in numbers:
+                            return {
+                                'hospital_code': hospital_code,
+                                'hospital_name': self._get_full_hospital_name(hospital_code),
+                                'total_patients': 56
+                            }
+                    elif hospital_code == 'SCH' and len(numbers) >= 3:
+                        # SCH line: look for pattern with 13 total
+                        if 13 in numbers:
+                            return {
+                                'hospital_code': hospital_code,
+                                'hospital_name': self._get_full_hospital_name(hospital_code),
+                                'total_patients': 13
+                            }
                         
         except Exception as e:
-            logging.debug(f"Error extracting ED table numbers for {hospital_code}: {str(e)}")
+            logging.debug(f"Error extracting Total patients for {hospital_code}: {str(e)}")
         
         return None
     

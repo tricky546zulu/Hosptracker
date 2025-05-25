@@ -66,44 +66,17 @@ function updateHospitalCard(hospital, data) {
     const prefix = hospital.toLowerCase();
     
     if (data) {
-        // Update Emergency Department metrics
-        document.getElementById(`${prefix}-admitted`).textContent = data.admitted_pts_in_ed || '-';
-        document.getElementById(`${prefix}-active`).textContent = data.active_patients || '-';
-        document.getElementById(`${prefix}-consults`).textContent = data.consults || '-';
+        // Update Total patients count
         document.getElementById(`${prefix}-total-patients`).textContent = data.total_patients || '-';
         
-        // Update capacity percentage
-        const percentage = data.capacity_percentage || 0;
-        document.getElementById(`${prefix}-percentage`).textContent = `${percentage.toFixed(1)}%`;
-        
-        // Update progress bar
-        const progressBar = document.getElementById(`${prefix}-progress`);
-        progressBar.style.width = `${percentage}%`;
-        progressBar.className = `progress-bar ${getCapacityClass(percentage)}`;
-        
-        // Update badge color
-        const badge = document.getElementById(`${prefix}-percentage`);
-        badge.className = `badge fs-6 ${getCapacityBadgeClass(percentage)}`;
-        
         // Add update animation
-        const card = progressBar.closest('.card');
+        const card = document.getElementById(`${prefix}-total-patients`).closest('.card');
         card.classList.add('data-update');
         setTimeout(() => card.classList.remove('data-update'), 500);
         
     } else {
         // Show no data state
-        document.getElementById(`${prefix}-admitted`).textContent = '-';
-        document.getElementById(`${prefix}-active`).textContent = '-';
-        document.getElementById(`${prefix}-consults`).textContent = '-';
         document.getElementById(`${prefix}-total-patients`).textContent = '-';
-        document.getElementById(`${prefix}-percentage`).textContent = '--%';
-        
-        const progressBar = document.getElementById(`${prefix}-progress`);
-        progressBar.style.width = '0%';
-        progressBar.className = 'progress-bar bg-secondary';
-        
-        const badge = document.getElementById(`${prefix}-percentage`);
-        badge.className = 'badge bg-secondary fs-6';
     }
 }
 
