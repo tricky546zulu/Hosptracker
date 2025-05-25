@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i data-feather="info" class="me-2"></i>
+            <div>
+                Emergency Department capacity data for Saskatoon hospitals. 
+                Data is automatically updated every 30 minutes from eHealth Saskatchewan.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hospital Cards -->
+<div class="row g-4 mb-5">
+    <!-- Royal University Hospital -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="home" class="me-2"></i>
+                <h5 class="mb-0">Royal University Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h3 class="mb-0" id="ruh-occupied">-</h3>
+                            <small class="text-muted">Occupied Beds</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="mb-0" id="ruh-total">-</h3>
+                        <small class="text-muted">Total Beds</small>
+                    </div>
+                </div>
+                
+                <div class="progress mb-3" style="height: 10px;">
+                    <div class="progress-bar" id="ruh-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+                
+                <div class="text-center">
+                    <span class="badge bg-secondary fs-6" id="ruh-percentage">--%</span>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        <i data-feather="users" class="me-1"></i>
+                        Admitted in ED: <span id="ruh-admitted" class="fw-bold">-</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- St. Paul's Hospital -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="home" class="me-2"></i>
+                <h5 class="mb-0">St. Paul's Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h3 class="mb-0" id="sph-occupied">-</h3>
+                            <small class="text-muted">Occupied Beds</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="mb-0" id="sph-total">-</h3>
+                        <small class="text-muted">Total Beds</small>
+                    </div>
+                </div>
+                
+                <div class="progress mb-3" style="height: 10px;">
+                    <div class="progress-bar" id="sph-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+                
+                <div class="text-center">
+                    <span class="badge bg-secondary fs-6" id="sph-percentage">--%</span>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        <i data-feather="users" class="me-1"></i>
+                        Admitted in ED: <span id="sph-admitted" class="fw-bold">-</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saskatoon City Hospital -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="home" class="me-2"></i>
+                <h5 class="mb-0">Saskatoon City Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h3 class="mb-0" id="sch-occupied">-</h3>
+                            <small class="text-muted">Occupied Beds</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="mb-0" id="sch-total">-</h3>
+                        <small class="text-muted">Total Beds</small>
+                    </div>
+                </div>
+                
+                <div class="progress mb-3" style="height: 10px;">
+                    <div class="progress-bar" id="sch-progress" role="progressbar" style="width: 0%"></div>
+                </div>
+                
+                <div class="text-center">
+                    <span class="badge bg-secondary fs-6" id="sch-percentage">--%</span>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        <i data-feather="users" class="me-1"></i>
+                        Admitted in ED: <span id="sch-admitted" class="fw-bold">-</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-4">
+    <!-- Capacity Percentage Chart -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="bar-chart-2" class="me-2"></i>
+                <h5 class="mb-0">Emergency Department Capacity</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="capacityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Trends Chart -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i data-feather="trending-up" class="me-2"></i>
+                    <h5 class="mb-0">24-Hour Capacity Trends</h5>
+                </div>
+                <select class="form-select form-select-sm" id="hospital-selector" style="width: auto;">
+                    <option value="RUH">Royal University Hospital</option>
+                    <option value="SPH">St. Paul's Hospital</option>
+                    <option value="SCH">Saskatoon City Hospital</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <canvas id="trendsChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Alert (hidden by default) -->
+<div class="alert alert-danger d-none mt-4" id="error-alert" role="alert">
+    <i data-feather="alert-circle" class="me-2"></i>
+    <span id="error-message">An error occurred while loading hospital data.</span>
+</div>
+
+<!-- No Data Alert (hidden by default) -->
+<div class="alert alert-warning d-none mt-4" id="no-data-alert" role="alert">
+    <i data-feather="alert-triangle" class="me-2"></i>
+    No recent hospital data available. The system may be initializing or experiencing issues with data collection.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+// Initialize the dashboard when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
+    
+    // Auto-refresh every 5 minutes
+    setInterval(function() {
+        loadHospitalData();
+        updateScrapingStatus();
+    }, 5 * 60 * 1000);
+    
+    // Hospital selector change event
+    document.getElementById('hospital-selector').addEventListener('change', function() {
+        const selectedHospital = this.value;
+        loadHistoricalData(selectedHospital);
+    });
+});
+</script>
+{% endblock %}

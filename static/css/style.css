@@ -1,0 +1,182 @@
+/* Custom styles for hospital capacity tracker */
+
+:root {
+    --hospital-red: hsl(0 75% 60%);
+    --hospital-yellow: hsl(45 100% 60%);
+    --hospital-green: hsl(120 60% 50%);
+    --capacity-high: hsl(0 70% 50%);
+    --capacity-medium: hsl(30 100% 50%);
+    --capacity-low: hsl(120 50% 40%);
+}
+
+/* Card enhancements */
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid var(--bs-border-color);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Progress bar customization */
+.progress {
+    background-color: var(--bs-gray-800);
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Capacity level colors */
+.capacity-low {
+    background-color: var(--capacity-low) !important;
+}
+
+.capacity-medium {
+    background-color: var(--capacity-medium) !important;
+}
+
+.capacity-high {
+    background-color: var(--capacity-high) !important;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Chart container */
+.card-body canvas {
+    max-height: 300px;
+}
+
+/* Hospital status indicators */
+.hospital-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.status-online {
+    background-color: var(--capacity-low);
+    box-shadow: 0 0 0 2px var(--capacity-low);
+}
+
+.status-warning {
+    background-color: var(--capacity-medium);
+    box-shadow: 0 0 0 2px var(--capacity-medium);
+}
+
+.status-critical {
+    background-color: var(--capacity-high);
+    box-shadow: 0 0 0 2px var(--capacity-high);
+}
+
+.status-offline {
+    background-color: var(--bs-gray-500);
+    box-shadow: 0 0 0 2px var(--bs-gray-500);
+}
+
+/* Loading states */
+.loading-placeholder {
+    background: linear-gradient(90deg, var(--bs-gray-800) 25%, var(--bs-gray-700) 50%, var(--bs-gray-800) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Alert customizations */
+.alert {
+    border-left: 4px solid;
+    border-radius: 0.375rem;
+}
+
+.alert-info {
+    border-left-color: var(--bs-info);
+}
+
+.alert-warning {
+    border-left-color: var(--bs-warning);
+}
+
+.alert-danger {
+    border-left-color: var(--bs-danger);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .progress {
+        height: 8px !important;
+    }
+    
+    h3 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Footer styling */
+footer {
+    margin-top: auto;
+}
+
+/* Navbar enhancements */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar-text {
+    font-size: 0.875rem;
+}
+
+/* Form controls */
+.form-select-sm {
+    min-width: 200px;
+}
+
+/* Animation for data updates */
+.data-update {
+    animation: highlight 0.5s ease-in-out;
+}
+
+@keyframes highlight {
+    0% { background-color: transparent; }
+    50% { background-color: var(--bs-info-bg-subtle); }
+    100% { background-color: transparent; }
+}
+
+/* Chart responsive containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Status text colors */
+.text-success-custom {
+    color: var(--capacity-low) !important;
+}
+
+.text-warning-custom {
+    color: var(--capacity-medium) !important;
+}
+
+.text-danger-custom {
+    color: var(--capacity-high) !important;
+}
