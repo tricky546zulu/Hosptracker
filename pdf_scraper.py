@@ -146,11 +146,11 @@ class HospitalDataScraper:
                 # Extract all numbers from the line
                 numbers = re.findall(r'\b\d+\b', line)
                 
-                # Look for the pattern from the screenshot: 
+                # Look for the pattern with exactly 4 numbers in sequence
                 # RUH: 10 33 5 48 (Total = 48)
-                # SPH: 23 30 3 56 (Total = 56)  
+                # SPH: 23 30 3 48 (Total = 48)  
                 # SCH: 3 10 0 13 (Total = 13)
-                if len(numbers) >= 4:
+                if len(numbers) == 4:
                     total_patients = int(numbers[3])  # Last number is Total
                     
                     return {
