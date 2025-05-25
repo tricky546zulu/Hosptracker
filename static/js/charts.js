@@ -244,24 +244,10 @@ function updateCapacityChart() {
     capacityChart.update();
 }
 
-// Load historical data for trends chart
+// Simplified - no historical data for now
 async function loadHistoricalData(hospitalCode) {
-    try {
-        currentTrendHospital = hospitalCode;
-        
-        const response = await fetch(`/api/hospital-history/${hospitalCode}`);
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            updateTrendsChart(result.data);
-        } else {
-            console.error('Failed to load historical data:', result.message);
-            updateTrendsChart([]);
-        }
-    } catch (error) {
-        console.error('Error loading historical data:', error);
-        updateTrendsChart([]);
-    }
+    // Skip historical data to avoid errors
+    return;
 }
 
 // Update trends chart with historical data
