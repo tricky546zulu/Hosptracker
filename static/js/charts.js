@@ -66,10 +66,11 @@ function updateHospitalCard(hospital, data) {
     const prefix = hospital.toLowerCase();
     
     if (data) {
-        // Update bed counts
-        document.getElementById(`${prefix}-occupied`).textContent = data.occupied_beds || '-';
-        document.getElementById(`${prefix}-total`).textContent = data.total_beds || '-';
+        // Update Emergency Department metrics
         document.getElementById(`${prefix}-admitted`).textContent = data.admitted_pts_in_ed || '-';
+        document.getElementById(`${prefix}-active`).textContent = data.active_patients || '-';
+        document.getElementById(`${prefix}-consults`).textContent = data.consults || '-';
+        document.getElementById(`${prefix}-total-patients`).textContent = data.total_patients || '-';
         
         // Update capacity percentage
         const percentage = data.capacity_percentage || 0;
@@ -91,9 +92,10 @@ function updateHospitalCard(hospital, data) {
         
     } else {
         // Show no data state
-        document.getElementById(`${prefix}-occupied`).textContent = '-';
-        document.getElementById(`${prefix}-total`).textContent = '-';
         document.getElementById(`${prefix}-admitted`).textContent = '-';
+        document.getElementById(`${prefix}-active`).textContent = '-';
+        document.getElementById(`${prefix}-consults`).textContent = '-';
+        document.getElementById(`${prefix}-total-patients`).textContent = '-';
         document.getElementById(`${prefix}-percentage`).textContent = '--%';
         
         const progressBar = document.getElementById(`${prefix}-progress`);

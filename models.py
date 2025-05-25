@@ -9,6 +9,9 @@ class HospitalCapacity(db.Model):
     total_beds = db.Column(db.Integer)
     capacity_percentage = db.Column(db.Float)
     admitted_pts_in_ed = db.Column(db.Integer)
+    active_patients = db.Column(db.Integer)
+    consults = db.Column(db.Integer)
+    total_patients = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

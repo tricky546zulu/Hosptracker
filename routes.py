@@ -28,6 +28,9 @@ def get_hospital_data():
                     'total_beds': latest.total_beds or 0,
                     'capacity_percentage': latest.capacity_percentage or 0,
                     'admitted_pts_in_ed': latest.admitted_pts_in_ed or 0,
+                    'active_patients': latest.active_patients or 0,
+                    'consults': latest.consults or 0,
+                    'total_patients': latest.total_patients or 0,
                     'timestamp': latest.timestamp.isoformat() if latest.timestamp else None,
                     'status': 'success'
                 }
