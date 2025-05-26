@@ -130,11 +130,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateScrapingStatus();
     }, 5 * 60 * 1000);
     
-    // Hospital selector change event
-    document.getElementById('hospital-selector').addEventListener('change', function() {
-        const selectedHospital = this.value;
-        loadHistoricalData(selectedHospital);
-    });
+    // Refresh historical data every 5 minutes
+    setInterval(function() {
+        loadAllHospitalTrends();
+    }, 5 * 60 * 1000);
 });
 </script>
 {% endblock %}

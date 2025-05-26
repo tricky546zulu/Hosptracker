@@ -165,15 +165,7 @@ function initializeTrendsChart() {
         type: 'line',
         data: {
             labels: [],
-            datasets: [{
-                label: 'Total Patients',
-                data: [],
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4
-            }]
+            datasets: []
         },
         options: {
             responsive: true,
@@ -184,8 +176,13 @@ function initializeTrendsChart() {
                     time: {
                         unit: 'hour',
                         displayFormats: {
-                            hour: 'HH:mm'
-                        }
+                            hour: 'MMM DD, HH:mm'
+                        },
+                        tooltipFormat: 'MMM DD, YYYY HH:mm'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Saskatchewan Time'
                     }
                 },
                 y: {
@@ -195,22 +192,83 @@ function initializeTrendsChart() {
                         callback: function(value) {
                             return value + ' patients';
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total Patients'
                     }
                 }
             },
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top'
                 },
                 tooltip: {
                     callbacks: {
+                        title: function(context) {
+                            const date = new Date(context[0].parsed.x);
+                            return date.toLocaleString('en-CA', {
+                                timeZone: 'America/Regina',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        },
                         label: function(context) {
-                            return `Total Patients: ${context.parsed.y}`;
+                            return `${context.dataset.label}: ${context.parsed.y} patients`;
                         }
                     }
                 }
             }
         }
+    });
+}
+
+// Initialize mini charts for each hospital card
+function initializeMiniCharts() {
+    const hospitals = ['ruh', 'sph', 'sch'];
+    
+    hospitals.forEach(hospital => {
+        const ctx = document.getElementById(`${hospital}-mini-chart`).getContext('2d');
+        miniCharts[hospital] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    borderColor: hospital === 'ruh' ? 'rgba(75, 192, 192, 1)' : 
+                                hospital === 'sph' ? 'rgba(255, 99, 132, 1)' : 
+                                'rgba(54, 162, 235, 1)',
+                    backgroundColor: hospital === 'ruh' ? 'rgba(75, 192, 192, 0.1)' : 
+                                    hospital === 'sph' ? 'rgba(255, 99, 132, 0.1)' : 
+                                    'rgba(54, 162, 235, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { 
+                        display: false,
+                        beginAtZero: true,
+                        max: 80
+                    }
+                },
+                interaction: { intersect: false }
+            }
+        });
     });
 }
 
@@ -242,42 +300,98 @@ function updateCapacityChart() {
     capacityChart.update();
 }
 
-// Load historical data for trends chart
-async function loadHistoricalData(hospitalCode) {
+// Load historical data for all hospitals combined
+async function loadAllHospitalTrends() {
     try {
-        currentTrendHospital = hospitalCode;
+        const hospitals = ['RUH', 'SPH', 'SCH'];
+        const allData = {};
         
-        const response = await fetch(`/api/hospital-history/${hospitalCode}`);
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            updateTrendsChart(result.data);
-        } else {
-            console.error('Failed to load historical data:', result.message);
-            updateTrendsChart([]);
+        // Fetch data for all hospitals
+        for (const hospital of hospitals) {
+            const response = await fetch(`/api/hospital-history/${hospital}`);
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                allData[hospital] = result.data;
+                // Update mini chart for this hospital
+                updateMiniChart(hospital.toLowerCase(), result.data);
+            }
         }
+        
+        // Update combined trends chart
+        updateCombinedTrendsChart(allData);
+        
     } catch (error) {
-        console.error('Error loading historical data:', error);
-        updateTrendsChart([]);
+        console.error('Error loading hospital trends:', error);
     }
 }
 
-// Update trends chart with historical data
-function updateTrendsChart(data) {
+// Update mini chart for individual hospital
+function updateMiniChart(hospitalCode, data) {
+    const chart = miniCharts[hospitalCode];
+    if (!chart || !data || data.length === 0) return;
+    
+    // Convert timestamps to Saskatchewan time and get patient counts
+    const labels = data.map(item => {
+        const date = new Date(item.timestamp);
+        // Saskatchewan is UTC-6 (CST) or UTC-7 (CDT)
+        return new Date(date.getTime() - (6 * 60 * 60 * 1000));
+    });
+    const patientData = data.map(item => item.total_patients || 0);
+    
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = patientData;
+    chart.update('none'); // No animation for mini charts
+}
+
+// Update trends chart with combined hospital data
+function updateCombinedTrendsChart(allData) {
     if (!trendsChart) return;
     
-    const labels = data.map(item => new Date(item.timestamp));
-    const totalPatientsData = data.map(item => item.total_patients || 0);
+    // Clear existing datasets
+    trendsChart.data.datasets = [];
     
-    trendsChart.data.labels = labels;
-    trendsChart.data.datasets[0].data = totalPatientsData;
+    const hospitals = [
+        { code: 'RUH', name: 'Royal University Hospital', color: 'rgba(75, 192, 192, 1)' },
+        { code: 'SPH', name: "St. Paul's Hospital", color: 'rgba(255, 99, 132, 1)' },
+        { code: 'SCH', name: 'Saskatoon City Hospital', color: 'rgba(54, 162, 235, 1)' }
+    ];
     
-    // Update chart title to show selected hospital
-    const hospitalName = getFullHospitalName(currentTrendHospital);
-    trendsChart.options.plugins.title = {
-        display: true,
-        text: `${hospitalName} - 24 Hour Trends`
-    };
+    let allTimestamps = new Set();
+    
+    // Add datasets for each hospital
+    hospitals.forEach(hospital => {
+        const data = allData[hospital.code] || [];
+        if (data.length > 0) {
+            // Convert to Saskatchewan time
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                // Saskatchewan is UTC-6 (CST)
+                return new Date(date.getTime() - (6 * 60 * 60 * 1000));
+            });
+            const patientData = data.map(item => item.total_patients || 0);
+            
+            // Add timestamps to the set
+            labels.forEach(label => allTimestamps.add(label.getTime()));
+            
+            trendsChart.data.datasets.push({
+                label: hospital.name,
+                data: labels.map((label, index) => ({
+                    x: label,
+                    y: patientData[index]
+                })),
+                borderColor: hospital.color,
+                backgroundColor: hospital.color.replace('1)', '0.1)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.4
+            });
+        }
+    });
+    
+    // Sort timestamps and use for x-axis
+    const sortedTimestamps = Array.from(allTimestamps).sort();
+    trendsChart.data.labels = sortedTimestamps.map(ts => new Date(ts));
     
     trendsChart.update();
 }
