@@ -90,8 +90,38 @@ function updateHospitalCard(hospital, data) {
     const prefix = hospital.toLowerCase();
     
     if (data) {
+        const currentPatients = data.total_patients || 0;
+        const previousPatients = previousData[hospital] || currentPatients;
+        
         // Update Total patients count
-        document.getElementById(`${prefix}-total-patients`).textContent = data.total_patients || '-';
+        document.getElementById(`${prefix}-total-patients`).textContent = currentPatients;
+        
+        // Update capacity indicator
+        const capacityLevel = getCapacityLevel(currentPatients);
+        const indicator = document.getElementById(`${prefix}-capacity-indicator`);
+        indicator.textContent = capacityLevel.text;
+        indicator.className = `badge ${capacityLevel.class}`;
+        
+        // Update percentage change
+        const change = currentPatients - previousPatients;
+        const changeElement = document.getElementById(`${prefix}-change`);
+        if (change > 0) {
+            changeElement.textContent = `+${change}`;
+            changeElement.className = 'badge bg-danger';
+        } else if (change < 0) {
+            changeElement.textContent = `${change}`;
+            changeElement.className = 'badge bg-success';
+        } else {
+            changeElement.textContent = 'No change';
+            changeElement.className = 'badge bg-light text-dark';
+        }
+        
+        // Update time since last update
+        const timeSince = getTimeSinceUpdate(data.timestamp);
+        document.getElementById(`${prefix}-time-since`).textContent = `Updated ${timeSince}`;
+        
+        // Store current data as previous for next comparison
+        previousData[hospital] = currentPatients;
         
         // Add update animation
         const card = document.getElementById(`${prefix}-total-patients`).closest('.card');
@@ -101,17 +131,52 @@ function updateHospitalCard(hospital, data) {
     } else {
         // Show no data state
         document.getElementById(`${prefix}-total-patients`).textContent = '-';
+        document.getElementById(`${prefix}-capacity-indicator`).textContent = 'No Data';
+        document.getElementById(`${prefix}-change`).textContent = '-';
+        document.getElementById(`${prefix}-time-since`).textContent = 'No recent data';
     }
 }
 
-// Get capacity level CSS class
+// Get capacity level for Emergency Department
+function getCapacityLevel(patientCount) {
+    if (patientCount >= 70) {
+        return { text: 'Very Busy', class: 'bg-danger' };
+    } else if (patientCount >= 50) {
+        return { text: 'Busy', class: 'bg-warning' };
+    } else if (patientCount >= 30) {
+        return { text: 'Moderate', class: 'bg-info' };
+    } else {
+        return { text: 'Quiet', class: 'bg-success' };
+    }
+}
+
+// Get time since last update in plain language
+function getTimeSinceUpdate(timestamp) {
+    if (!timestamp) return 'unknown time ago';
+    
+    const now = new Date();
+    const updateTime = new Date(timestamp);
+    const diffMinutes = Math.floor((now - updateTime) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes === 1) return '1 minute ago';
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours === 1) return '1 hour ago';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    
+    return 'over a day ago';
+}
+
+// Get capacity level CSS class (legacy function)
 function getCapacityClass(percentage) {
     if (percentage >= 90) return 'capacity-high';
     if (percentage >= 75) return 'capacity-medium';
     return 'capacity-low';
 }
 
-// Get capacity badge CSS class
+// Get capacity badge CSS class (legacy function)
 function getCapacityBadgeClass(percentage) {
     if (percentage >= 90) return 'bg-danger';
     if (percentage >= 75) return 'bg-warning';

@@ -180,3 +180,53 @@ footer {
 .text-danger-custom {
     color: var(--capacity-high) !important;
 }
+
+/* Refresh button animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Enhanced mobile responsiveness for header */
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center !important;
+        text-align: center;
+    }
+    
+    .d-flex.align-items-center.gap-2 {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Connection status and refresh button styling */
+#connection-status {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#refresh-btn {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+}
+
+#refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
