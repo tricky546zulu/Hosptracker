@@ -162,16 +162,25 @@ def get_analytics_data(days):
         total_points = len(hospital_data)
         valid_patients = [h.total_patients for h in hospital_data if h.total_patients is not None]
         
-        # Calculate average patients per day across all hospitals combined
+        # Calculate total average patients per day across all hospitals combined
         if valid_patients and days > 0:
-            # Get unique dates to count actual days with data
-            unique_dates = set()
+            # Group by date and sum all hospitals for each day
+            daily_totals = {}
             for h in hospital_data:
                 if h.total_patients is not None:
-                    unique_dates.add(h.timestamp.date())
+                    date_key = h.timestamp.date()
+                    if date_key not in daily_totals:
+                        daily_totals[date_key] = {}
+                    daily_totals[date_key][h.hospital_code] = h.total_patients
             
-            actual_days = len(unique_dates) if unique_dates else days
-            avg_per_day = sum(valid_patients) / len(valid_patients) if valid_patients else 0
+            # Calculate daily sums (all hospitals combined per day)
+            daily_sums = []
+            for date, hospitals in daily_totals.items():
+                # Get the latest reading for each hospital on each day
+                daily_sum = sum(hospitals.values())
+                daily_sums.append(daily_sum)
+            
+            avg_per_day = sum(daily_sums) / len(daily_sums) if daily_sums else 0
         else:
             avg_per_day = 0
             
