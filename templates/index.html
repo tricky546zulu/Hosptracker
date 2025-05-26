@@ -38,7 +38,7 @@
 <!-- Hospital Cards -->
 <div class="row g-4 mb-5">
     <!-- Royal University Hospital -->
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="home" class="me-2"></i>
@@ -46,8 +46,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span id="ruh-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                    <div class="d-flex justify-content-end align-items-center mb-2">
                         <span id="ruh-change" class="badge bg-light text-dark">-</span>
                     </div>
                     <h1 class="display-4 mb-2" id="ruh-total-patients">-</h1>
@@ -62,7 +61,7 @@
     </div>
 
     <!-- St. Paul's Hospital -->
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="home" class="me-2"></i>
@@ -70,8 +69,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span id="sph-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                    <div class="d-flex justify-content-end align-items-center mb-2">
                         <span id="sph-change" class="badge bg-light text-dark">-</span>
                     </div>
                     <h1 class="display-4 mb-2" id="sph-total-patients">-</h1>
@@ -86,7 +84,7 @@
     </div>
 
     <!-- Saskatoon City Hospital -->
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="home" class="me-2"></i>
@@ -94,8 +92,7 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span id="sch-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                    <div class="d-flex justify-content-end align-items-center mb-2">
                         <span id="sch-change" class="badge bg-light text-dark">-</span>
                     </div>
                     <h1 class="display-4 mb-2" id="sch-total-patients">-</h1>
@@ -104,6 +101,29 @@
                 </div>
                 <div class="mini-chart-container" style="height: 80px; margin-top: 15px;">
                     <canvas id="sch-mini-chart" width="300" height="80" style="width: 100%; height: 80px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jim Pattison Children's Hospital -->
+    <div class="col-lg-3">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="home" class="me-2"></i>
+                <h5 class="mb-0">Jim Pattison Children's Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="d-flex justify-content-end align-items-center mb-2">
+                        <span id="jpch-change" class="badge bg-light text-dark">-</span>
+                    </div>
+                    <h1 class="display-4 mb-2" id="jpch-total-patients">-</h1>
+                    <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                    <small class="text-muted" id="jpch-time-since">Loading...</small>
+                </div>
+                <div class="mini-chart-container" style="height: 80px; margin-top: 15px;">
+                    <canvas id="jpch-mini-chart" width="300" height="80" style="width: 100%; height: 80px;"></canvas>
                 </div>
             </div>
         </div>

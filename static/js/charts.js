@@ -96,12 +96,6 @@ function updateHospitalCard(hospital, data) {
         // Update Total patients count
         document.getElementById(`${prefix}-total-patients`).textContent = currentPatients;
         
-        // Update capacity indicator
-        const capacityLevel = getCapacityLevel(currentPatients);
-        const indicator = document.getElementById(`${prefix}-capacity-indicator`);
-        indicator.textContent = capacityLevel.text;
-        indicator.className = `badge ${capacityLevel.class}`;
-        
         // Update percentage change
         const change = currentPatients - previousPatients;
         const changeElement = document.getElementById(`${prefix}-change`);
