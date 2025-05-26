@@ -325,7 +325,8 @@ function initializeMiniCharts() {
     const hospitals = [
         { code: 'ruh', name: 'RUH', color: 'rgba(75, 192, 192, 1)' },
         { code: 'sph', name: 'SPH', color: 'rgba(255, 99, 132, 1)' },
-        { code: 'sch', name: 'SCH', color: 'rgba(54, 162, 235, 1)' }
+        { code: 'sch', name: 'SCH', color: 'rgba(54, 162, 235, 1)' },
+        { code: 'jpch', name: 'JPCH', color: 'rgba(255, 206, 86, 1)' }
     ];
     
     hospitals.forEach(hospital => {
