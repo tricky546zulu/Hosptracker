@@ -161,8 +161,20 @@ def get_analytics_data(days):
         # Calculate summary statistics
         total_points = len(hospital_data)
         valid_patients = [h.total_patients for h in hospital_data if h.total_patients is not None]
-        total_patients = sum(valid_patients)
-        avg_per_day = total_patients / days if days > 0 and valid_patients else 0
+        
+        # Calculate average patients per day across all hospitals combined
+        if valid_patients and days > 0:
+            # Get unique dates to count actual days with data
+            unique_dates = set()
+            for h in hospital_data:
+                if h.total_patients is not None:
+                    unique_dates.add(h.timestamp.date())
+            
+            actual_days = len(unique_dates) if unique_dates else days
+            avg_per_day = sum(valid_patients) / len(valid_patients) if valid_patients else 0
+        else:
+            avg_per_day = 0
+            
         peak_count = max(valid_patients) if valid_patients else 0
         
         # Find busiest hospital
