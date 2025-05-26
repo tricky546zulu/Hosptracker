@@ -238,56 +238,10 @@ function initializeTrendsChart() {
     });
 }
 
-// Initialize mini charts for each hospital card
+// Initialize simple CSS-based mini charts
 function initializeMiniCharts() {
-    const hospitals = ['ruh', 'sph', 'sch'];
-    
-    hospitals.forEach(hospital => {
-        const chartElement = document.getElementById(`${hospital}-mini-chart`);
-        if (!chartElement) {
-            console.warn(`Chart element ${hospital}-mini-chart not found`);
-            return;
-        }
-        
-        const ctx = chartElement.getContext('2d');
-        miniCharts[hospital] = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    data: [],
-                    borderColor: hospital === 'ruh' ? 'rgba(75, 192, 192, 1)' : 
-                                hospital === 'sph' ? 'rgba(255, 99, 132, 1)' : 
-                                'rgba(54, 162, 235, 1)',
-                    backgroundColor: hospital === 'ruh' ? 'rgba(75, 192, 192, 0.1)' : 
-                                    hospital === 'sph' ? 'rgba(255, 99, 132, 0.1)' : 
-                                    'rgba(54, 162, 235, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                },
-                scales: {
-                    x: { display: false },
-                    y: { 
-                        display: false,
-                        beginAtZero: true,
-                        max: 80
-                    }
-                },
-                interaction: { intersect: false }
-            }
-        });
-    });
+    console.log('Initializing mini charts with CSS...');
+    // Mini charts will be created with CSS/HTML - no complex Chart.js needed
 }
 
 // Update capacity chart with current data
@@ -344,22 +298,34 @@ async function loadAllHospitalTrends() {
     }
 }
 
-// Update mini chart for individual hospital
+// Update mini chart for individual hospital using SVG
 function updateMiniChart(hospitalCode, data) {
-    const chart = miniCharts[hospitalCode];
-    if (!chart || !data || data.length === 0) return;
+    if (!data || data.length === 0) return;
     
-    // Convert timestamps to Saskatchewan time and get patient counts
-    const labels = data.map(item => {
-        const date = new Date(item.timestamp);
-        // Saskatchewan is UTC-6 (CST) or UTC-7 (CDT)
-        return new Date(date.getTime() - (6 * 60 * 60 * 1000));
-    });
+    const lineElement = document.getElementById(`${hospitalCode}-line`);
+    const loadingElement = document.querySelector(`#${hospitalCode}-mini-chart .mini-chart-loading`);
+    
+    if (!lineElement) return;
+    
+    // Hide loading text
+    if (loadingElement) loadingElement.style.display = 'none';
+    
+    // Get patient data
     const patientData = data.map(item => item.total_patients || 0);
+    const maxPatients = Math.max(...patientData, 60); // At least 60 for scale
     
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = patientData;
-    chart.update('none'); // No animation for mini charts
+    // Create SVG points for the line
+    const width = 100; // SVG viewBox width
+    const height = 100; // SVG viewBox height
+    const points = patientData.map((value, index) => {
+        const x = (index / Math.max(patientData.length - 1, 1)) * width;
+        const y = height - (value / maxPatients) * height;
+        return `${x},${y}`;
+    }).join(' ');
+    
+    // Update the polyline points
+    lineElement.setAttribute('points', points);
+    lineElement.parentElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
 }
 
 // Update trends chart with combined hospital data
