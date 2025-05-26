@@ -428,8 +428,8 @@ async function updateScrapingStatus() {
                     hour12: false
                 });
                 
-                const now = new Date();
-                const diffMinutes = Math.floor((now - scrapeTime) / (1000 * 60));
+                const nowUTC = new Date();
+                const diffMinutes = Math.floor((nowUTC - scrapeTime) / (1000 * 60));
                 
                 let statusText = '';
                 let statusClass = '';
