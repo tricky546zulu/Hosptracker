@@ -1,14 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Status Cards -->
+<!-- Header Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i data-feather="activity" class="me-2"></i>
+            Emergency Department Capacity
+        </h1>
+        <p class="text-muted mb-0">Real-time data from eHealth Saskatchewan</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button id="refresh-btn" class="btn btn-outline-primary" onclick="refreshData()">
+            <i data-feather="refresh-cw" class="me-1"></i>
+            Refresh
+        </button>
+        <div id="connection-status" class="badge bg-success">
+            <i data-feather="wifi" class="me-1"></i>
+            Connected
+        </div>
+    </div>
+</div>
+
+<!-- Status Alert -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="alert alert-info d-flex align-items-center" role="alert">
+        <div id="data-status-alert" class="alert alert-info d-flex align-items-center" role="alert">
             <i data-feather="info" class="me-2"></i>
             <div>
                 Emergency Department capacity data for Saskatoon hospitals. 
-                Data is automatically updated every 30 minutes from eHealth Saskatchewan.
+                <span id="update-frequency">Data is automatically updated every 30 minutes from eHealth Saskatchewan.</span>
             </div>
         </div>
     </div>
@@ -25,8 +46,13 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span id="ruh-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                        <span id="ruh-change" class="badge bg-light text-dark">-</span>
+                    </div>
                     <h1 class="display-4 mb-2" id="ruh-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                    <small class="text-muted" id="ruh-time-since">Loading...</small>
                 </div>
                 <div class="mini-chart-container" style="height: 80px; margin-top: 15px;">
                     <canvas id="ruh-mini-chart" width="300" height="80" style="width: 100%; height: 80px;"></canvas>
@@ -44,8 +70,13 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span id="sph-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                        <span id="sph-change" class="badge bg-light text-dark">-</span>
+                    </div>
                     <h1 class="display-4 mb-2" id="sph-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                    <small class="text-muted" id="sph-time-since">Loading...</small>
                 </div>
                 <div class="mini-chart-container" style="height: 80px; margin-top: 15px;">
                     <canvas id="sph-mini-chart" width="300" height="80" style="width: 100%; height: 80px;"></canvas>
@@ -63,8 +94,13 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span id="sch-capacity-indicator" class="badge bg-secondary">Loading...</span>
+                        <span id="sch-change" class="badge bg-light text-dark">-</span>
+                    </div>
                     <h1 class="display-4 mb-2" id="sch-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                    <small class="text-muted" id="sch-time-since">Loading...</small>
                 </div>
                 <div class="mini-chart-container" style="height: 80px; margin-top: 15px;">
                     <canvas id="sch-mini-chart" width="300" height="80" style="width: 100%; height: 80px;"></canvas>

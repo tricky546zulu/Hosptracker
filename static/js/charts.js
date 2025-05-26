@@ -3,6 +3,7 @@
 let capacityChart = null;
 let hospitalData = {};
 let miniCharts = {};
+let previousData = {};
 
 // Initialize the dashboard
 function initializeDashboard() {
@@ -26,6 +27,22 @@ function initializeDashboard() {
     } catch (error) {
         console.error('Error starting dashboard:', error);
     }
+}
+
+// Manual refresh function
+function refreshData() {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const icon = refreshBtn.querySelector('i');
+    
+    // Show loading state
+    refreshBtn.disabled = true;
+    icon.style.animation = 'spin 1s linear infinite';
+    
+    loadHospitalData().finally(() => {
+        // Reset button state
+        refreshBtn.disabled = false;
+        icon.style.animation = '';
+    });
 }
 
 // Load current hospital data
