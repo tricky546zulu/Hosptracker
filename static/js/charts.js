@@ -280,52 +280,75 @@ async function loadAllHospitalTrends() {
         
         // Fetch data for all hospitals
         for (const hospital of hospitals) {
-            const response = await fetch(`/api/hospital-history/${hospital}`);
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                allData[hospital] = result.data;
-                // Update mini chart for this hospital
-                updateMiniChart(hospital.toLowerCase(), result.data);
+            try {
+                const response = await fetch(`/api/hospital-history/${hospital}`);
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.data && result.data.length > 0) {
+                    allData[hospital] = result.data;
+                    // Update mini chart for this hospital
+                    console.log(`Updating mini chart for ${hospital} with ${result.data.length} data points`);
+                    updateMiniChart(hospital.toLowerCase(), result.data);
+                } else {
+                    console.warn(`No data for ${hospital}:`, result);
+                }
+            } catch (hospitalError) {
+                console.error(`Error loading data for ${hospital}:`, hospitalError);
             }
         }
         
         // Update combined trends chart
-        updateCombinedTrendsChart(allData);
+        if (Object.keys(allData).length > 0) {
+            updateCombinedTrendsChart(allData);
+        }
         
     } catch (error) {
         console.error('Error loading hospital trends:', error);
     }
 }
 
-// Update mini chart for individual hospital using SVG
+// Update mini chart for individual hospital using simple bars
 function updateMiniChart(hospitalCode, data) {
     if (!data || data.length === 0) return;
     
-    const lineElement = document.getElementById(`${hospitalCode}-line`);
-    const loadingElement = document.querySelector(`#${hospitalCode}-mini-chart .mini-chart-loading`);
+    const chartElement = document.getElementById(`${hospitalCode}-mini-chart`);
+    if (!chartElement) return;
     
-    if (!lineElement) return;
+    // Get the last 10 data points
+    const recentData = data.slice(-10);
+    const patientData = recentData.map(item => item.total_patients || 0);
+    const maxPatients = Math.max(...patientData, 30); // At least 30 for scale
     
-    // Hide loading text
-    if (loadingElement) loadingElement.style.display = 'none';
+    // Color based on hospital
+    const colors = {
+        'ruh': 'rgba(75, 192, 192, 0.8)',
+        'sph': 'rgba(255, 99, 132, 0.8)', 
+        'sch': 'rgba(54, 162, 235, 0.8)'
+    };
     
-    // Get patient data
-    const patientData = data.map(item => item.total_patients || 0);
-    const maxPatients = Math.max(...patientData, 60); // At least 60 for scale
+    // Clear existing bars
+    chartElement.innerHTML = '';
     
-    // Create SVG points for the line
-    const width = 100; // SVG viewBox width
-    const height = 100; // SVG viewBox height
-    const points = patientData.map((value, index) => {
-        const x = (index / Math.max(patientData.length - 1, 1)) * width;
-        const y = height - (value / maxPatients) * height;
-        return `${x},${y}`;
-    }).join(' ');
-    
-    // Update the polyline points
-    lineElement.setAttribute('points', points);
-    lineElement.parentElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    // Create bars for each data point
+    patientData.forEach((value, index) => {
+        const bar = document.createElement('div');
+        const height = Math.max((value / maxPatients) * 100, 5); // Min 5% height
+        
+        bar.style.cssText = `
+            width: ${100 / patientData.length - 1}%;
+            height: ${height}%;
+            background-color: ${colors[hospitalCode] || 'rgba(128, 128, 128, 0.8)'};
+            margin-right: 1px;
+            border-radius: 1px;
+            transition: opacity 0.3s ease;
+        `;
+        
+        // Add hover effect
+        bar.onmouseover = () => bar.style.opacity = '0.7';
+        bar.onmouseout = () => bar.style.opacity = '1';
+        
+        chartElement.appendChild(bar);
+    });
 }
 
 // Update trends chart with combined hospital data
