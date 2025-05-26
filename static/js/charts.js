@@ -338,6 +338,8 @@ function showSimpleTrend(hospitalCode, data) {
 function updateCombinedTrendsChart(allData) {
     if (!trendsChart) return;
     
+    console.log('Updating combined trends chart with data:', Object.keys(allData));
+    
     // Clear existing datasets
     trendsChart.data.datasets = [];
     
@@ -347,43 +349,40 @@ function updateCombinedTrendsChart(allData) {
         { code: 'SCH', name: 'Saskatoon City Hospital', color: 'rgba(54, 162, 235, 1)' }
     ];
     
-    let allTimestamps = new Set();
-    
     // Add datasets for each hospital
     hospitals.forEach(hospital => {
         const data = allData[hospital.code] || [];
+        console.log(`Processing ${hospital.code}: ${data.length} records`);
+        
         if (data.length > 0) {
-            // Convert to Saskatchewan time
-            const labels = data.map(item => {
-                const date = new Date(item.timestamp);
-                // Saskatchewan is UTC-6 (CST)
-                return new Date(date.getTime() - (6 * 60 * 60 * 1000));
-            });
-            const patientData = data.map(item => item.total_patients || 0);
+            // Get last 24 hours of data
+            const last24Hours = data.slice(-48); // Assuming data comes every 30-60 minutes
             
-            // Add timestamps to the set
-            labels.forEach(label => allTimestamps.add(label.getTime()));
+            const chartData = last24Hours.map(item => {
+                const date = new Date(item.timestamp);
+                return {
+                    x: date.toISOString(),
+                    y: item.total_patients || 0
+                };
+            });
             
             trendsChart.data.datasets.push({
                 label: hospital.name,
-                data: labels.map((label, index) => ({
-                    x: label,
-                    y: patientData[index]
-                })),
+                data: chartData,
                 borderColor: hospital.color,
                 backgroundColor: hospital.color.replace('1)', '0.1)'),
                 borderWidth: 2,
                 fill: false,
-                tension: 0.4
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 5
             });
         }
     });
     
-    // Sort timestamps and use for x-axis
-    const sortedTimestamps = Array.from(allTimestamps).sort();
-    trendsChart.data.labels = sortedTimestamps.map(ts => new Date(ts));
-    
+    // Update the chart
     trendsChart.update();
+    console.log('Chart updated with', trendsChart.data.datasets.length, 'datasets');
 }
 
 // Update scraping status
