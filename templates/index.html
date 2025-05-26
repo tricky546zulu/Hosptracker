@@ -118,9 +118,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updateScrapingStatus();
     }, 5 * 60 * 1000);
     
-    // Refresh historical data every 5 minutes
+    // Refresh charts every 5 minutes
     setInterval(function() {
-        loadAllHospitalTrends();
+        if (typeof loadHospitalChart === 'function') {
+            loadHospitalChart('RUH');
+            loadHospitalChart('SPH');
+            loadHospitalChart('SCH');
+        }
     }, 5 * 60 * 1000);
 });
 </script>
