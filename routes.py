@@ -160,9 +160,10 @@ def get_analytics_data(days):
         
         # Calculate summary statistics
         total_points = len(hospital_data)
-        total_patients = sum(h.total_patients for h in hospital_data if h.total_patients)
-        avg_per_day = total_patients / days if days > 0 else 0
-        peak_count = max((h.total_patients for h in hospital_data if h.total_patients), default=0)
+        valid_patients = [h.total_patients for h in hospital_data if h.total_patients is not None]
+        total_patients = sum(valid_patients)
+        avg_per_day = total_patients / days if days > 0 and valid_patients else 0
+        peak_count = max(valid_patients) if valid_patients else 0
         
         # Find busiest hospital
         hospital_totals = {}
@@ -170,7 +171,7 @@ def get_analytics_data(days):
             code = hospital.hospital_code
             if code not in hospital_totals:
                 hospital_totals[code] = []
-            if hospital.total_patients:
+            if hospital.total_patients is not None:
                 hospital_totals[code].append(hospital.total_patients)
         
         hospital_averages = {code: sum(values)/len(values) if values else 0 
@@ -207,11 +208,12 @@ def get_analytics_data(days):
                 }
                 
                 # Comparison data
-                patient_counts = [h.total_patients for h in hospital_records if h.total_patients]
+                patient_counts = [h.total_patients for h in hospital_records if h.total_patients is not None]
                 if patient_counts:
-                    comparison_data['averages'][hospital_code] = sum(patient_counts) / len(patient_counts)
+                    avg_value = sum(patient_counts) / len(patient_counts)
+                    comparison_data['averages'][hospital_code] = avg_value
                     comparison_data['peaks'][hospital_code] = {
-                        'average': sum(patient_counts) / len(patient_counts),
+                        'average': avg_value,
                         'peak': max(patient_counts)
                     }
         
