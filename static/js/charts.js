@@ -435,10 +435,10 @@ async function updateScrapingStatus() {
                 let statusClass = '';
                 
                 if (lastScrape.status === 'success') {
-                    statusText = `Last updated ${timeString} (${diffMinutes} min ago)`;
+                    statusText = `Last updated ${timeString}`;
                     statusClass = 'text-success-custom';
                 } else {
-                    statusText = `Error at ${timeString} (${diffMinutes} min ago)`;
+                    statusText = `Error at ${timeString}`;
                     statusClass = 'text-danger-custom';
                 }
                 
