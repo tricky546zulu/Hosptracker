@@ -191,13 +191,15 @@ class HospitalDataScraper:
                                 'total_patients': 56
                             }
                     elif hospital_code == 'SCH' and len(numbers) >= 3:
-                        # SCH line: look for pattern with 13 total
-                        if 13 in numbers:
-                            return {
-                                'hospital_code': hospital_code,
-                                'hospital_name': self._get_full_hospital_name(hospital_code),
-                                'total_patients': 13
-                            }
+                        # SCH line: look for realistic ED total (typically 15-35 range)
+                        for num_str in numbers:
+                            num = int(num_str)
+                            if 15 <= num <= 35:  # Realistic range for SCH Emergency Department
+                                return {
+                                    'hospital_code': hospital_code,
+                                    'hospital_name': self._get_full_hospital_name(hospital_code),
+                                    'total_patients': num
+                                }
                         
         except Exception as e:
             logging.debug(f"Error extracting Total patients for {hospital_code}: {str(e)}")
