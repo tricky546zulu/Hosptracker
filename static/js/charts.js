@@ -1,10 +1,8 @@
 // Hospital Capacity Dashboard Charts and Data Management
 
 let capacityChart = null;
-let trendsChart = null;
 let hospitalData = {};
 let miniCharts = {};
-let currentTrendHospital = 'RUH';
 
 // Initialize the dashboard
 function initializeDashboard() {
@@ -15,14 +13,14 @@ function initializeDashboard() {
         loadHospitalData();
         updateScrapingStatus();
         
-        // Initialize charts one by one
+        // Initialize capacity chart
         setTimeout(() => {
             initializeCapacityChart();
         }, 100);
         
+        // Initialize individual hospital charts
         setTimeout(() => {
-            initializeTrendsChart();
-            loadTrendsData();
+            initializeMiniCharts();
         }, 200);
         
     } catch (error) {
@@ -245,10 +243,59 @@ function initializeTrendsChart() {
     });
 }
 
-// Initialize simple CSS-based mini charts - do nothing complex
+// Initialize individual hospital line charts
 function initializeMiniCharts() {
-    // Keep it simple - just log
-    console.log('Mini charts ready');
+    console.log('Initializing hospital line charts...');
+    
+    const hospitals = [
+        { code: 'ruh', name: 'RUH', color: 'rgba(75, 192, 192, 1)' },
+        { code: 'sph', name: 'SPH', color: 'rgba(255, 99, 132, 1)' },
+        { code: 'sch', name: 'SCH', color: 'rgba(54, 162, 235, 1)' }
+    ];
+    
+    hospitals.forEach(hospital => {
+        const canvas = document.getElementById(`${hospital.code}-mini-chart`);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            miniCharts[hospital.code] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        borderColor: hospital.color,
+                        backgroundColor: hospital.color.replace('1)', '0.1)'),
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { 
+                            display: false,
+                            beginAtZero: true
+                        }
+                    },
+                    elements: {
+                        point: { radius: 0 }
+                    }
+                }
+            });
+            
+            // Load data for this hospital
+            loadHospitalChart(hospital.code.toUpperCase());
+        }
+    });
 }
 
 // Update capacity chart with current data
@@ -279,50 +326,38 @@ function updateCapacityChart() {
     capacityChart.update();
 }
 
-// Simple function to load trends data
-async function loadTrendsData() {
-    if (!trendsChart) return;
-    
-    console.log('Loading trends data...');
-    
+// Load data for individual hospital chart
+async function loadHospitalChart(hospitalCode) {
     try {
-        const hospitals = [
-            { code: 'RUH', name: 'Royal University Hospital', color: 'rgba(75, 192, 192, 1)' },
-            { code: 'SPH', name: "St. Paul's Hospital", color: 'rgba(255, 99, 132, 1)' },
-            { code: 'SCH', name: 'Saskatoon City Hospital', color: 'rgba(54, 162, 235, 1)' }
-        ];
+        const response = await fetch(`/api/hospital-history/${hospitalCode}`);
+        const result = await response.json();
         
-        trendsChart.data.datasets = [];
-        
-        for (const hospital of hospitals) {
-            const response = await fetch(`/api/hospital-history/${hospital.code}`);
-            const result = await response.json();
-            
-            if (result.status === 'success' && result.data && result.data.length > 0) {
-                const data = result.data.slice(-24); // Last 24 records
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+            const chart = miniCharts[hospitalCode.toLowerCase()];
+            if (chart) {
+                // Get last 20 data points for better readability
+                const recentData = result.data.slice(-20);
                 
-                trendsChart.data.datasets.push({
-                    label: hospital.name,
-                    data: data.map(item => ({
-                        x: new Date(item.timestamp),
-                        y: item.total_patients
-                    })),
-                    borderColor: hospital.color,
-                    backgroundColor: hospital.color.replace('1)', '0.1)'),
-                    borderWidth: 2,
-                    fill: false
+                const labels = recentData.map(item => {
+                    const date = new Date(item.timestamp);
+                    return date.toLocaleTimeString('en-CA', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        timeZone: 'America/Regina' 
+                    });
                 });
                 
-                // Update mini chart
-                showSimpleTrend(hospital.code.toLowerCase(), result.data);
+                const data = recentData.map(item => item.total_patients || 0);
+                
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = data;
+                chart.update();
+                
+                console.log(`Updated ${hospitalCode} chart with ${data.length} points`);
             }
         }
-        
-        trendsChart.update();
-        console.log('Trends chart updated with', trendsChart.data.datasets.length, 'hospitals');
-        
     } catch (error) {
-        console.error('Error loading trends:', error);
+        console.error(`Error loading ${hospitalCode} chart:`, error);
     }
 }
 
