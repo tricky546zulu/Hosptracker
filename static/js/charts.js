@@ -417,7 +417,10 @@ async function updateScrapingStatus() {
             
             if (lastScrape.timestamp) {
                 const scrapeTime = new Date(lastScrape.timestamp);
-                // Saskatchewan is UTC-6 (no daylight saving)
+                const nowUTC = new Date();
+                const diffMinutes = Math.floor((nowUTC.getTime() - scrapeTime.getTime()) / (1000 * 60));
+                
+                // Saskatchewan is UTC-6 (no daylight saving) - only for display
                 const saskTime = new Date(scrapeTime.getTime() - (6 * 60 * 60 * 1000));
                 const timeString = saskTime.toLocaleString('en-CA', {
                     year: 'numeric',
@@ -427,9 +430,6 @@ async function updateScrapingStatus() {
                     minute: '2-digit',
                     hour12: false
                 });
-                
-                const nowUTC = new Date();
-                const diffMinutes = Math.floor((nowUTC.getTime() - scrapeTime.getTime()) / (1000 * 60));
                 
                 let statusText = '';
                 let statusClass = '';
