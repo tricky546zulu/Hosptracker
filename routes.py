@@ -175,7 +175,13 @@ def get_analytics_data(days):
         
         hospital_averages = {code: sum(values)/len(values) if values else 0 
                            for code, values in hospital_totals.items()}
-        busiest_hospital = max(hospital_averages, key=hospital_averages.get) if hospital_averages else '-'
+        busiest_hospital = '-'
+        if hospital_averages:
+            max_avg = 0
+            for code, avg in hospital_averages.items():
+                if avg > max_avg:
+                    max_avg = avg
+                    busiest_hospital = code
         
         # Generate hospital-specific analytics
         analytics_data = {}
