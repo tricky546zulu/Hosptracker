@@ -125,11 +125,6 @@ def get_hospital_name(code):
     }
     return hospital_names.get(code, code)
 
-@app.route('/analytics')
-def analytics():
-    """Analytics dashboard page"""
-    return render_template('analytics.html')
-
 @app.route('/api/analytics/<int:days>')
 def get_analytics_data(days):
     """Get analytics data for specified number of days"""
