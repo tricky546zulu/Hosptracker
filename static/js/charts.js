@@ -335,8 +335,21 @@ async function loadHospitalChart(hospitalCode) {
         if (result.status === 'success' && result.data && result.data.length > 0) {
             const chart = miniCharts[hospitalCode.toLowerCase()];
             if (chart) {
-                // Get last 20 data points for better readability
-                const recentData = result.data.slice(-20);
+                // Filter out duplicate timestamps and smooth the data
+                const filteredData = [];
+                const seenTimestamps = new Set();
+                
+                // Process data in reverse to get latest entries first
+                result.data.reverse().forEach(item => {
+                    const timeKey = new Date(item.timestamp).toISOString().slice(0, 16); // Group by minute
+                    if (!seenTimestamps.has(timeKey)) {
+                        seenTimestamps.add(timeKey);
+                        filteredData.push(item);
+                    }
+                });
+                
+                // Get last 15 unique data points for cleaner display
+                const recentData = filteredData.slice(0, 15).reverse();
                 
                 const labels = recentData.map(item => {
                     const date = new Date(item.timestamp);
@@ -353,7 +366,7 @@ async function loadHospitalChart(hospitalCode) {
                 chart.data.datasets[0].data = data;
                 chart.update();
                 
-                console.log(`Updated ${hospitalCode} chart with ${data.length} points`);
+                console.log(`Updated ${hospitalCode} chart with ${data.length} filtered points`);
             }
         }
     } catch (error) {
@@ -363,56 +376,7 @@ async function loadHospitalChart(hospitalCode) {
 
 
 
-// Update trends chart with combined hospital data
-function updateCombinedTrendsChart(allData) {
-    if (!trendsChart) return;
-    
-    console.log('Updating combined trends chart with data:', Object.keys(allData));
-    
-    // Clear existing datasets
-    trendsChart.data.datasets = [];
-    
-    const hospitals = [
-        { code: 'RUH', name: 'Royal University Hospital', color: 'rgba(75, 192, 192, 1)' },
-        { code: 'SPH', name: "St. Paul's Hospital", color: 'rgba(255, 99, 132, 1)' },
-        { code: 'SCH', name: 'Saskatoon City Hospital', color: 'rgba(54, 162, 235, 1)' }
-    ];
-    
-    // Add datasets for each hospital
-    hospitals.forEach(hospital => {
-        const data = allData[hospital.code] || [];
-        console.log(`Processing ${hospital.code}: ${data.length} records`);
-        
-        if (data.length > 0) {
-            // Get last 24 hours of data
-            const last24Hours = data.slice(-48); // Assuming data comes every 30-60 minutes
-            
-            const chartData = last24Hours.map(item => {
-                const date = new Date(item.timestamp);
-                return {
-                    x: date.toISOString(),
-                    y: item.total_patients || 0
-                };
-            });
-            
-            trendsChart.data.datasets.push({
-                label: hospital.name,
-                data: chartData,
-                borderColor: hospital.color,
-                backgroundColor: hospital.color.replace('1)', '0.1)'),
-                borderWidth: 2,
-                fill: false,
-                tension: 0.3,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            });
-        }
-    });
-    
-    // Update the chart
-    trendsChart.update();
-    console.log('Chart updated with', trendsChart.data.datasets.length, 'datasets');
-}
+// Remove old function - no longer needed
 
 // Update scraping status
 async function updateScrapingStatus() {
