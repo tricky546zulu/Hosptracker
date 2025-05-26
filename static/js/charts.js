@@ -274,6 +274,7 @@ function updateCapacityChart() {
 
 // Load historical data for combined trends chart only
 async function loadAllHospitalTrends() {
+    console.log('Loading hospital trends data...');
     try {
         const hospitals = ['RUH', 'SPH', 'SCH'];
         const allData = {};
@@ -281,8 +282,11 @@ async function loadAllHospitalTrends() {
         // Fetch data for all hospitals
         for (const hospital of hospitals) {
             try {
+                console.log(`Fetching data for ${hospital}...`);
                 const response = await fetch(`/api/hospital-history/${hospital}`);
                 const result = await response.json();
+                
+                console.log(`${hospital} response:`, result.status, result.data ? result.data.length : 0, 'records');
                 
                 if (result.status === 'success' && result.data && result.data.length > 0) {
                     allData[hospital] = result.data;
@@ -294,9 +298,14 @@ async function loadAllHospitalTrends() {
             }
         }
         
+        console.log('All data collected:', Object.keys(allData), 'hospitals');
+        
         // Update combined trends chart
         if (Object.keys(allData).length > 0) {
+            console.log('Updating combined trends chart...');
             updateCombinedTrendsChart(allData);
+        } else {
+            console.warn('No data available for trends chart');
         }
         
     } catch (error) {
