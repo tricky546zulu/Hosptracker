@@ -363,7 +363,31 @@ class HospitalDataScraper:
         """Save hospital data to database"""
         try:
             with app.app_context():
+                # Filter out duplicate/incorrect entries for RUH, SPH, SCH only
+                filtered_data = []
+                seen_hospitals = set()
+                
                 for data in hospital_data:
+                    hospital_code = data['hospital_code']
+                    total_patients = data.get('total_patients', 0)
+                    
+                    # Only save data for the three target hospitals
+                    if hospital_code not in ['RUH', 'SPH', 'SCH']:
+                        continue
+                    
+                    # Avoid duplicate entries for the same hospital
+                    if hospital_code in seen_hospitals:
+                        continue
+                    
+                    # Filter out obviously incorrect low values for RUH
+                    if hospital_code == 'RUH' and total_patients < 20:
+                        continue
+                    
+                    seen_hospitals.add(hospital_code)
+                    filtered_data.append(data)
+                
+                # Save only the filtered, authentic data
+                for data in filtered_data:
                     capacity = HospitalCapacity(
                         hospital_code=data['hospital_code'],
                         hospital_name=data['hospital_name'],
@@ -373,7 +397,7 @@ class HospitalDataScraper:
                     db.session.add(capacity)
                 
                 db.session.commit()
-                logging.info("Hospital data saved to database")
+                logging.info(f"Hospital data saved to database for {len(filtered_data)} hospitals")
                 
         except Exception as e:
             db.session.rollback()
