@@ -219,7 +219,7 @@ function updateAverageComparisonChart(averageData) {
     }
     
     const hospitals = Object.keys(averageData);
-    const values = Object.values(averageData);
+    const values = Object.values(averageData).map(v => Math.round(v * 10) / 10);
     
     analyticsCharts.comparison = new Chart(ctx, {
         type: 'doughnut',
@@ -260,7 +260,7 @@ function updatePeakComparisonChart(peakData) {
     }
     
     const hospitals = Object.keys(peakData);
-    const averages = hospitals.map(h => peakData[h].average);
+    const averages = hospitals.map(h => Math.round(peakData[h].average * 10) / 10);
     const peaks = hospitals.map(h => peakData[h].peak);
     
     analyticsCharts.peakComparison = new Chart(ctx, {
