@@ -429,7 +429,7 @@ async function updateScrapingStatus() {
                 });
                 
                 const nowUTC = new Date();
-                const diffMinutes = Math.floor((nowUTC - scrapeTime) / (1000 * 60));
+                const diffMinutes = Math.floor((nowUTC.getTime() - scrapeTime.getTime()) / (1000 * 60));
                 
                 let statusText = '';
                 let statusClass = '';
