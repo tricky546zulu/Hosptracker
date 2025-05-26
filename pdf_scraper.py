@@ -123,6 +123,11 @@ class HospitalDataScraper:
                     data = self._extract_numbers_from_line_context(lines, i, 'SCH')
                     if data and data['total_patients'] >= 15:  # Only accept realistic SCH numbers
                         hospitals.append(data)
+                        
+                elif any(keyword in line for keyword in ['Jim Pattison', 'Children', 'JPCH']):
+                    data = self._extract_numbers_from_line_context(lines, i, 'JPCH')
+                    if data:
+                        hospitals.append(data)
             
             # If no hospitals found, create with realistic sample data for testing
             if not hospitals:
@@ -178,7 +183,23 @@ class HospitalDataScraper:
                             consults = int(numbers[-2])  # Consults
                             total_patients = active + consults  # True ED total
                         else:
-                            total_patients = int(numbers[-1])  # Fallback to last number
+                            total_patients = int(numbers[-1])
+                        return {
+                            'hospital_code': hospital_code,
+                            'hospital_name': self._get_full_hospital_name(hospital_code),
+                            'total_patients': total_patients
+                        }
+                    elif hospital_code == 'JPCH':
+                        # For JPCH, use the last number as Total
+                        total_patients = int(numbers[-1])
+                        return {
+                            'hospital_code': hospital_code,
+                            'hospital_name': self._get_full_hospital_name(hospital_code),
+                            'total_patients': total_patients
+                        }
+                    else:
+                        # Default case for any other hospital
+                        total_patients = int(numbers[-1])
                         return {
                             'hospital_code': hospital_code,
                             'hospital_name': self._get_full_hospital_name(hospital_code),
@@ -355,7 +376,8 @@ class HospitalDataScraper:
         names = {
             'RUH': 'Royal University Hospital',
             'SPH': "St. Paul's Hospital",
-            'SCH': 'Saskatoon City Hospital'
+            'SCH': 'Saskatoon City Hospital',
+            'JPCH': 'Jim Pattison Children\'s Hospital'
         }
         return names.get(code, code)
     
