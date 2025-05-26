@@ -98,7 +98,13 @@ function getCapacityBadgeClass(percentage) {
 
 // Initialize capacity comparison chart
 function initializeCapacityChart() {
-    const ctx = document.getElementById('capacityChart').getContext('2d');
+    const chartElement = document.getElementById('capacityChart');
+    if (!chartElement) {
+        console.warn('Capacity chart element not found');
+        return;
+    }
+    
+    const ctx = chartElement.getContext('2d');
     
     capacityChart = new Chart(ctx, {
         type: 'bar',
@@ -159,7 +165,13 @@ function initializeCapacityChart() {
 
 // Initialize trends chart
 function initializeTrendsChart() {
-    const ctx = document.getElementById('trendsChart').getContext('2d');
+    const chartElement = document.getElementById('trendsChart');
+    if (!chartElement) {
+        console.warn('Trends chart element not found');
+        return;
+    }
+    
+    const ctx = chartElement.getContext('2d');
     
     trendsChart = new Chart(ctx, {
         type: 'line',
@@ -231,7 +243,13 @@ function initializeMiniCharts() {
     const hospitals = ['ruh', 'sph', 'sch'];
     
     hospitals.forEach(hospital => {
-        const ctx = document.getElementById(`${hospital}-mini-chart`).getContext('2d');
+        const chartElement = document.getElementById(`${hospital}-mini-chart`);
+        if (!chartElement) {
+            console.warn(`Chart element ${hospital}-mini-chart not found`);
+            return;
+        }
+        
+        const ctx = chartElement.getContext('2d');
         miniCharts[hospital] = new Chart(ctx, {
             type: 'line',
             data: {
