@@ -15,7 +15,7 @@ def get_hospital_data():
     """API endpoint to get latest hospital capacity data"""
     try:
         # Get the latest data for each hospital
-        hospitals = ['RUH', 'SPH', 'SCH']
+        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
         hospital_data = {}
         
         for hospital in hospitals:

@@ -189,17 +189,19 @@ function initializeCapacityChart() {
     capacityChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Royal University Hospital', "St. Paul's Hospital", 'Saskatoon City Hospital'],
+            labels: ['Royal University Hospital', "St. Paul's Hospital", 'Saskatoon City Hospital', "Jim Pattison Children's Hospital"],
             datasets: [{
-                label: 'ED Capacity %',
-                data: [0, 0, 0],
+                label: 'Total Patients',
+                data: [0, 0, 0, 0],
                 backgroundColor: [
                     'rgba(75, 192, 192, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
                     'rgba(54, 162, 235, 0.8)',
                     'rgba(255, 206, 86, 0.8)'
                 ],
                 borderColor: [
                     'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)',
                     'rgba(54, 162, 235, 1)',
                     'rgba(255, 206, 86, 1)'
                 ],
@@ -405,7 +407,7 @@ function initializeMiniCharts() {
 function updateCapacityChart() {
     if (!capacityChart) return;
     
-    const hospitals = ['RUH', 'SPH', 'SCH'];
+    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
     const totalPatientsData = hospitals.map(hospital => {
         const data = hospitalData[hospital];
         return data ? (data.total_patients || 0) : 0;
