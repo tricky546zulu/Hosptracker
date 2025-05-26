@@ -171,8 +171,14 @@ class HospitalDataScraper:
                             'total_patients': total_patients
                         }
                     elif hospital_code == 'SCH':
-                        # For SCH, use the last number as Total (authentic from PDF)
-                        total_patients = int(numbers[-1])
+                        # For SCH, sum Active + Consults for true Emergency Department total
+                        # PDF format: Admitted | Active | Consults | Total
+                        if len(numbers) >= 4:
+                            active = int(numbers[-3])  # Active patients
+                            consults = int(numbers[-2])  # Consults
+                            total_patients = active + consults  # True ED total
+                        else:
+                            total_patients = int(numbers[-1])  # Fallback to last number
                         return {
                             'hospital_code': hospital_code,
                             'hospital_name': self._get_full_hospital_name(hospital_code),
