@@ -8,19 +8,26 @@ let currentTrendHospital = 'RUH';
 
 // Initialize the dashboard
 function initializeDashboard() {
-    console.log('Initializing hospital capacity dashboard...');
+    console.log('Starting dashboard...');
     
-    // Load initial data
-    loadHospitalData();
-    updateScrapingStatus();
-    
-    // Initialize charts
-    initializeCapacityChart();
-    initializeTrendsChart();
-    initializeMiniCharts();
-    
-    // Load all hospital historical data for combined view
-    loadAllHospitalTrends();
+    try {
+        // Load current data first
+        loadHospitalData();
+        updateScrapingStatus();
+        
+        // Initialize charts one by one
+        setTimeout(() => {
+            initializeCapacityChart();
+        }, 100);
+        
+        setTimeout(() => {
+            initializeTrendsChart();
+            loadTrendsData();
+        }, 200);
+        
+    } catch (error) {
+        console.error('Error starting dashboard:', error);
+    }
 }
 
 // Load current hospital data
@@ -272,44 +279,50 @@ function updateCapacityChart() {
     capacityChart.update();
 }
 
-// Load historical data for combined trends chart only
-async function loadAllHospitalTrends() {
-    console.log('Loading hospital trends data...');
+// Simple function to load trends data
+async function loadTrendsData() {
+    if (!trendsChart) return;
+    
+    console.log('Loading trends data...');
+    
     try {
-        const hospitals = ['RUH', 'SPH', 'SCH'];
-        const allData = {};
+        const hospitals = [
+            { code: 'RUH', name: 'Royal University Hospital', color: 'rgba(75, 192, 192, 1)' },
+            { code: 'SPH', name: "St. Paul's Hospital", color: 'rgba(255, 99, 132, 1)' },
+            { code: 'SCH', name: 'Saskatoon City Hospital', color: 'rgba(54, 162, 235, 1)' }
+        ];
         
-        // Fetch data for all hospitals
+        trendsChart.data.datasets = [];
+        
         for (const hospital of hospitals) {
-            try {
-                console.log(`Fetching data for ${hospital}...`);
-                const response = await fetch(`/api/hospital-history/${hospital}`);
-                const result = await response.json();
+            const response = await fetch(`/api/hospital-history/${hospital.code}`);
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data && result.data.length > 0) {
+                const data = result.data.slice(-24); // Last 24 records
                 
-                console.log(`${hospital} response:`, result.status, result.data ? result.data.length : 0, 'records');
+                trendsChart.data.datasets.push({
+                    label: hospital.name,
+                    data: data.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: item.total_patients
+                    })),
+                    borderColor: hospital.color,
+                    backgroundColor: hospital.color.replace('1)', '0.1)'),
+                    borderWidth: 2,
+                    fill: false
+                });
                 
-                if (result.status === 'success' && result.data && result.data.length > 0) {
-                    allData[hospital] = result.data;
-                    // Simple mini chart update
-                    showSimpleTrend(hospital.toLowerCase(), result.data);
-                }
-            } catch (hospitalError) {
-                console.error(`Error loading data for ${hospital}:`, hospitalError);
+                // Update mini chart
+                showSimpleTrend(hospital.code.toLowerCase(), result.data);
             }
         }
         
-        console.log('All data collected:', Object.keys(allData), 'hospitals');
-        
-        // Update combined trends chart
-        if (Object.keys(allData).length > 0) {
-            console.log('Updating combined trends chart...');
-            updateCombinedTrendsChart(allData);
-        } else {
-            console.warn('No data available for trends chart');
-        }
+        trendsChart.update();
+        console.log('Trends chart updated with', trendsChart.data.datasets.length, 'hospitals');
         
     } catch (error) {
-        console.error('Error loading hospital trends:', error);
+        console.error('Error loading trends:', error);
     }
 }
 
