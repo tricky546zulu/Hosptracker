@@ -238,10 +238,10 @@ function initializeTrendsChart() {
     });
 }
 
-// Initialize simple CSS-based mini charts
+// Initialize simple CSS-based mini charts - do nothing complex
 function initializeMiniCharts() {
-    console.log('Initializing mini charts with CSS...');
-    // Mini charts will be created with CSS/HTML - no complex Chart.js needed
+    // Keep it simple - just log
+    console.log('Mini charts ready');
 }
 
 // Update capacity chart with current data
@@ -272,7 +272,7 @@ function updateCapacityChart() {
     capacityChart.update();
 }
 
-// Load historical data for all hospitals combined
+// Load historical data for combined trends chart only
 async function loadAllHospitalTrends() {
     try {
         const hospitals = ['RUH', 'SPH', 'SCH'];
@@ -286,11 +286,8 @@ async function loadAllHospitalTrends() {
                 
                 if (result.status === 'success' && result.data && result.data.length > 0) {
                     allData[hospital] = result.data;
-                    // Update mini chart for this hospital
-                    console.log(`Updating mini chart for ${hospital} with ${result.data.length} data points`);
-                    updateMiniChart(hospital.toLowerCase(), result.data);
-                } else {
-                    console.warn(`No data for ${hospital}:`, result);
+                    // Simple mini chart update
+                    showSimpleTrend(hospital.toLowerCase(), result.data);
                 }
             } catch (hospitalError) {
                 console.error(`Error loading data for ${hospital}:`, hospitalError);
@@ -307,45 +304,31 @@ async function loadAllHospitalTrends() {
     }
 }
 
-// Update mini chart for individual hospital using simple bars
-function updateMiniChart(hospitalCode, data) {
+// Simple trend display function
+function showSimpleTrend(hospitalCode, data) {
     if (!data || data.length === 0) return;
     
     const chartElement = document.getElementById(`${hospitalCode}-mini-chart`);
     if (!chartElement) return;
     
-    // Get the last 10 data points
-    const recentData = data.slice(-10);
-    const patientData = recentData.map(item => item.total_patients || 0);
-    const maxPatients = Math.max(...patientData, 30); // At least 30 for scale
+    // Get last few data points
+    const recent = data.slice(-8);
+    const values = recent.map(item => item.total_patients || 0);
+    const max = Math.max(...values, 20);
     
-    // Color based on hospital
-    const colors = {
-        'ruh': 'rgba(75, 192, 192, 0.8)',
-        'sph': 'rgba(255, 99, 132, 0.8)', 
-        'sch': 'rgba(54, 162, 235, 0.8)'
-    };
-    
-    // Clear existing bars
+    // Clear and add simple bars
     chartElement.innerHTML = '';
     
-    // Create bars for each data point
-    patientData.forEach((value, index) => {
+    values.forEach(value => {
         const bar = document.createElement('div');
-        const height = Math.max((value / maxPatients) * 100, 5); // Min 5% height
+        bar.style.width = '10px';
+        bar.style.height = Math.max((value / max) * 30, 3) + 'px';
+        bar.style.marginRight = '2px';
+        bar.style.borderRadius = '1px';
         
-        bar.style.cssText = `
-            width: ${100 / patientData.length - 1}%;
-            height: ${height}%;
-            background-color: ${colors[hospitalCode] || 'rgba(128, 128, 128, 0.8)'};
-            margin-right: 1px;
-            border-radius: 1px;
-            transition: opacity 0.3s ease;
-        `;
-        
-        // Add hover effect
-        bar.onmouseover = () => bar.style.opacity = '0.7';
-        bar.onmouseout = () => bar.style.opacity = '1';
+        if (hospitalCode === 'ruh') bar.style.backgroundColor = 'rgba(75, 192, 192, 0.7)';
+        else if (hospitalCode === 'sph') bar.style.backgroundColor = 'rgba(255, 99, 132, 0.7)';
+        else bar.style.backgroundColor = 'rgba(54, 162, 235, 0.7)';
         
         chartElement.appendChild(bar);
     });
