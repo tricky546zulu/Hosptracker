@@ -259,9 +259,19 @@ function updatePeakComparisonChart(peakData) {
         analyticsCharts.peakComparison.destroy();
     }
     
+    console.log('Peak comparison data:', peakData);
+    
     const hospitals = Object.keys(peakData);
-    const averages = hospitals.map(h => Math.round(peakData[h].average * 10) / 10);
-    const peaks = hospitals.map(h => peakData[h].peak);
+    const averages = hospitals.map(h => {
+        const avg = Math.round(peakData[h].average * 10) / 10;
+        console.log(`${h} average:`, avg);
+        return avg;
+    });
+    const peaks = hospitals.map(h => {
+        const peak = peakData[h].peak;
+        console.log(`${h} peak:`, peak);
+        return peak;
+    });
     
     analyticsCharts.peakComparison = new Chart(ctx, {
         type: 'bar',
