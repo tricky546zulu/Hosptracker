@@ -24,9 +24,12 @@
                 <h5 class="mb-0">Royal University Hospital</h5>
             </div>
             <div class="card-body">
-                <div class="text-center">
+                <div class="text-center mb-3">
                     <h1 class="display-4 mb-2" id="ruh-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                </div>
+                <div class="chart-container" style="height: 100px;">
+                    <canvas id="ruh-mini-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -40,9 +43,12 @@
                 <h5 class="mb-0">St. Paul's Hospital</h5>
             </div>
             <div class="card-body">
-                <div class="text-center">
+                <div class="text-center mb-3">
                     <h1 class="display-4 mb-2" id="sph-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                </div>
+                <div class="chart-container" style="height: 100px;">
+                    <canvas id="sph-mini-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -56,9 +62,12 @@
                 <h5 class="mb-0">Saskatoon City Hospital</h5>
             </div>
             <div class="card-body">
-                <div class="text-center">
+                <div class="text-center mb-3">
                     <h1 class="display-4 mb-2" id="sch-total-patients">-</h1>
                     <h5 class="text-muted">Total Patients in Emergency Department</h5>
+                </div>
+                <div class="chart-container" style="height: 100px;">
+                    <canvas id="sch-mini-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -83,16 +92,10 @@
     <!-- Historical Trends Chart -->
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center">
-                    <i data-feather="trending-up" class="me-2"></i>
-                    <h5 class="mb-0">24-Hour Capacity Trends</h5>
-                </div>
-                <select class="form-select form-select-sm" id="hospital-selector" style="width: auto;">
-                    <option value="RUH">Royal University Hospital</option>
-                    <option value="SPH">St. Paul's Hospital</option>
-                    <option value="SCH">Saskatoon City Hospital</option>
-                </select>
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="trending-up" class="me-2"></i>
+                <h5 class="mb-0">24-Hour Trends - All Hospitals</h5>
+                <small class="ms-auto text-muted">Saskatchewan Time</small>
             </div>
             <div class="card-body">
                 <canvas id="trendsChart" width="400" height="200"></canvas>

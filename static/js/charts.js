@@ -3,6 +3,7 @@
 let capacityChart = null;
 let trendsChart = null;
 let hospitalData = {};
+let miniCharts = {};
 let currentTrendHospital = 'RUH';
 
 // Initialize the dashboard
@@ -16,9 +17,10 @@ function initializeDashboard() {
     // Initialize charts
     initializeCapacityChart();
     initializeTrendsChart();
+    initializeMiniCharts();
     
-    // Load initial trends for RUH
-    loadHistoricalData('RUH');
+    // Load all hospital historical data for combined view
+    loadAllHospitalTrends();
 }
 
 // Load current hospital data
