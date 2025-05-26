@@ -121,7 +121,8 @@ def get_hospital_name(code):
     hospital_names = {
         'RUH': 'Royal University Hospital',
         'SPH': "St. Paul's Hospital", 
-        'SCH': 'Saskatoon City Hospital'
+        'SCH': 'Saskatoon City Hospital',
+        'JPCH': 'Jim Pattison Children\'s Hospital'
     }
     return hospital_names.get(code, code)
 

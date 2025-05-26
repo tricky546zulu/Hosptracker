@@ -72,7 +72,7 @@ async function loadHospitalData() {
 
 // Update hospital data cards
 function updateHospitalCards() {
-    const hospitals = ['RUH', 'SPH', 'SCH'];
+    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
     
     hospitals.forEach(hospital => {
         const data = hospitalData[hospital];
@@ -125,7 +125,6 @@ function updateHospitalCard(hospital, data) {
     } else {
         // Show no data state
         document.getElementById(`${prefix}-total-patients`).textContent = '-';
-        document.getElementById(`${prefix}-capacity-indicator`).textContent = 'No Data';
         document.getElementById(`${prefix}-change`).textContent = '-';
         document.getElementById(`${prefix}-time-since`).textContent = 'No recent data';
     }

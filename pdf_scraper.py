@@ -371,8 +371,8 @@ class HospitalDataScraper:
                     hospital_code = data['hospital_code']
                     total_patients = data.get('total_patients', 0)
                     
-                    # Only save data for the three target hospitals
-                    if hospital_code not in ['RUH', 'SPH', 'SCH']:
+                    # Only save data for the four target hospitals
+                    if hospital_code not in ['RUH', 'SPH', 'SCH', 'JPCH']:
                         continue
                     
                     # Avoid duplicate entries for the same hospital
