@@ -208,7 +208,6 @@ function updateWeeklyChart(hospital, weeklyData) {
 
 function updateComparisonCharts(comparisonData) {
     updateAverageComparisonChart(comparisonData.averages);
-    updatePeakComparisonChart(comparisonData.peaks);
 }
 
 function updateAverageComparisonChart(averageData) {
