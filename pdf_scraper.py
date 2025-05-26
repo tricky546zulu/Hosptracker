@@ -162,10 +162,26 @@ class HospitalDataScraper:
                                     'hospital_name': self._get_full_hospital_name(hospital_code),
                                     'total_patients': total_patients
                                 }
-                    else:
-                        # For RUH and SCH, use the last number as before
-                        total_patients = int(numbers[-1])  # Last number is Total
-                        
+                    elif hospital_code == 'RUH':
+                        # For RUH, use the last number as Total
+                        total_patients = int(numbers[-1])
+                        return {
+                            'hospital_code': hospital_code,
+                            'hospital_name': self._get_full_hospital_name(hospital_code),
+                            'total_patients': total_patients
+                        }
+                    elif hospital_code == 'SCH':
+                        # For SCH, look for realistic ED total in the numbers array
+                        for num_str in numbers:
+                            num = int(num_str)
+                            if 15 <= num <= 50:  # Realistic range for SCH Emergency Department
+                                return {
+                                    'hospital_code': hospital_code,
+                                    'hospital_name': self._get_full_hospital_name(hospital_code),
+                                    'total_patients': num
+                                }
+                        # If no realistic number found, use last number
+                        total_patients = int(numbers[-1])
                         return {
                             'hospital_code': hospital_code,
                             'hospital_name': self._get_full_hospital_name(hospital_code),
