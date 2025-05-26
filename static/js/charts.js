@@ -255,7 +255,7 @@ function initializeMiniCharts() {
     
     hospitals.forEach(hospital => {
         const canvas = document.getElementById(`${hospital.code}-mini-chart`);
-        if (canvas) {
+        if (canvas && canvas.getContext) {
             const ctx = canvas.getContext('2d');
             
             miniCharts[hospital.code] = new Chart(ctx, {
@@ -390,8 +390,9 @@ async function updateScrapingStatus() {
             
             if (lastScrape.timestamp) {
                 const scrapeTime = new Date(lastScrape.timestamp);
-                const saskTime = scrapeTime.toLocaleString('en-CA', {
-                    timeZone: 'America/Regina',
+                // Saskatchewan is UTC-6 (no daylight saving)
+                const saskTime = new Date(scrapeTime.getTime() - (6 * 60 * 60 * 1000));
+                const timeString = saskTime.toLocaleString('en-CA', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -407,10 +408,10 @@ async function updateScrapingStatus() {
                 let statusClass = '';
                 
                 if (lastScrape.status === 'success') {
-                    statusText = `Last updated ${saskTime} (${diffMinutes} min ago)`;
+                    statusText = `Last updated ${timeString} (${diffMinutes} min ago)`;
                     statusClass = 'text-success-custom';
                 } else {
-                    statusText = `Error at ${saskTime} (${diffMinutes} min ago)`;
+                    statusText = `Error at ${timeString} (${diffMinutes} min ago)`;
                     statusClass = 'text-danger-custom';
                 }
                 
