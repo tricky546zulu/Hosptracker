@@ -361,35 +361,7 @@ async function loadHospitalChart(hospitalCode) {
     }
 }
 
-// Simple trend display function
-function showSimpleTrend(hospitalCode, data) {
-    if (!data || data.length === 0) return;
-    
-    const chartElement = document.getElementById(`${hospitalCode}-mini-chart`);
-    if (!chartElement) return;
-    
-    // Get last few data points
-    const recent = data.slice(-8);
-    const values = recent.map(item => item.total_patients || 0);
-    const max = Math.max(...values, 20);
-    
-    // Clear and add simple bars
-    chartElement.innerHTML = '';
-    
-    values.forEach(value => {
-        const bar = document.createElement('div');
-        bar.style.width = '10px';
-        bar.style.height = Math.max((value / max) * 30, 3) + 'px';
-        bar.style.marginRight = '2px';
-        bar.style.borderRadius = '1px';
-        
-        if (hospitalCode === 'ruh') bar.style.backgroundColor = 'rgba(75, 192, 192, 0.7)';
-        else if (hospitalCode === 'sph') bar.style.backgroundColor = 'rgba(255, 99, 132, 0.7)';
-        else bar.style.backgroundColor = 'rgba(54, 162, 235, 0.7)';
-        
-        chartElement.appendChild(bar);
-    });
-}
+
 
 // Update trends chart with combined hospital data
 function updateCombinedTrendsChart(allData) {
