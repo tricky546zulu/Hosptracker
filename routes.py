@@ -228,13 +228,14 @@ def get_analytics_data(days):
                     'weekly_patterns': weekly_patterns
                 }
                 
-                # Comparison data
+                # Comparison data - use latest authentic values instead of averages
                 patient_counts = [h.total_patients for h in hospital_records if h.total_patients is not None]
                 if patient_counts:
-                    avg_value = sum(patient_counts) / len(patient_counts)
-                    comparison_data['averages'][hospital_code] = avg_value
+                    # Use the most recent authentic value for current comparison
+                    latest_value = hospital_records[0].total_patients if hospital_records else 0
+                    comparison_data['averages'][hospital_code] = latest_value
                     comparison_data['peaks'][hospital_code] = {
-                        'average': avg_value,
+                        'average': latest_value,
                         'peak': max(patient_counts)
                     }
         
