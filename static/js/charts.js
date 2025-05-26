@@ -390,6 +390,15 @@ async function updateScrapingStatus() {
             
             if (lastScrape.timestamp) {
                 const scrapeTime = new Date(lastScrape.timestamp);
+                const saskTime = scrapeTime.toLocaleString('en-CA', {
+                    timeZone: 'America/Regina',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
                 const now = new Date();
                 const diffMinutes = Math.floor((now - scrapeTime) / (1000 * 60));
                 
@@ -397,10 +406,10 @@ async function updateScrapingStatus() {
                 let statusClass = '';
                 
                 if (lastScrape.status === 'success') {
-                    statusText = `Last updated ${diffMinutes} min ago`;
+                    statusText = `Last updated ${saskTime} (${diffMinutes} min ago)`;
                     statusClass = 'text-success-custom';
                 } else {
-                    statusText = `Error ${diffMinutes} min ago`;
+                    statusText = `Error at ${saskTime} (${diffMinutes} min ago)`;
                     statusClass = 'text-danger-custom';
                 }
                 
