@@ -277,7 +277,26 @@ function initializeMiniCharts() {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    // Convert to Saskatchewan time for tooltip
+                                    const utcTime = new Date(context[0].label);
+                                    const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
+                                    return saskTime.toLocaleString('en-CA', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: false
+                                    }) + ' SK Time';
+                                },
+                                label: function(context) {
+                                    return `${context.parsed.y} patients`;
+                                }
+                            }
+                        }
                     },
                     scales: {
                         x: { display: false },
