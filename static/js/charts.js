@@ -281,16 +281,24 @@ function initializeMiniCharts() {
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    // Convert to Saskatchewan time for tooltip
-                                    const utcTime = new Date(context[0].label);
-                                    const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                                    return saskTime.toLocaleString('en-CA', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                        hour12: false
-                                    }) + ' SK Time';
+                                    // Get the original timestamp and convert to Saskatchewan time
+                                    const timeLabel = context[0].label;
+                                    // Parse the time and subtract 6 hours for Saskatchewan
+                                    const parts = timeLabel.split(':');
+                                    if (parts.length >= 2) {
+                                        let hour = parseInt(parts[0]);
+                                        let minute = parseInt(parts[1]);
+                                        
+                                        // Convert from UTC to Saskatchewan time (UTC-6)
+                                        hour = hour - 6;
+                                        if (hour < 0) hour += 24;
+                                        
+                                        const saskHour = hour.toString().padStart(2, '0');
+                                        const saskMinute = minute.toString().padStart(2, '0');
+                                        
+                                        return `${saskHour}:${saskMinute} SK Time`;
+                                    }
+                                    return timeLabel + ' SK Time';
                                 },
                                 label: function(context) {
                                     return `${context.parsed.y} patients`;
