@@ -72,7 +72,7 @@ async function loadHospitalData() {
 
 // Update hospital data cards
 function updateHospitalCards() {
-    const hospitals = ['RUH', 'SPH', 'SCH'];
+    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
     
     hospitals.forEach(hospital => {
         const data = hospitalData[hospital];
