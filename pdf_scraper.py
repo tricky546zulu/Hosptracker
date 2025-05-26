@@ -121,7 +121,7 @@ class HospitalDataScraper:
                         
                 elif any(keyword in line for keyword in ['Saskatoon City', 'SCH']):
                     data = self._extract_numbers_from_line_context(lines, i, 'SCH')
-                    if data:
+                    if data and data['total_patients'] >= 15:  # Only accept realistic SCH numbers
                         hospitals.append(data)
             
             # If no hospitals found, create with realistic sample data for testing
