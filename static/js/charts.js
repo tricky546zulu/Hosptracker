@@ -32,16 +32,16 @@ function initializeDashboard() {
 // Manual refresh function
 function refreshData() {
     const refreshBtn = document.getElementById('refresh-btn');
-    const icon = refreshBtn.querySelector('i');
+    const icon = refreshBtn ? refreshBtn.querySelector('i') : null;
     
     // Show loading state
-    refreshBtn.disabled = true;
-    icon.style.animation = 'spin 1s linear infinite';
+    if (refreshBtn) refreshBtn.disabled = true;
+    if (icon) icon.style.animation = 'spin 1s linear infinite';
     
     loadHospitalData().finally(() => {
         // Reset button state
-        refreshBtn.disabled = false;
-        icon.style.animation = '';
+        if (refreshBtn) refreshBtn.disabled = false;
+        if (icon) icon.style.animation = '';
     });
 }
 
@@ -50,32 +50,21 @@ async function loadHospitalData() {
     try {
         showLoading(true);
         
-        const response = await fetch('/api/hospital-data', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await fetch('/api/hospital-data');
         const result = await response.json();
         
-        if (result.status === 'success') {
+        if (result && result.status === 'success' && result.data) {
             hospitalData = result.data;
             updateHospitalCards();
             updateCapacityChart();
             updateLastUpdatedTime(result.last_updated);
             hideAlerts();
         } else {
-            throw new Error(result.message || 'API returned error status');
+            showError('No hospital data available');
         }
     } catch (error) {
         console.error('Error loading hospital data:', error);
-        showError('Unable to connect to hospital data service. Please check your connection and try refreshing the page.');
+        showError('Connection error - please refresh the page');
     } finally {
         showLoading(false);
     }
