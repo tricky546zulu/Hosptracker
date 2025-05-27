@@ -50,7 +50,13 @@ async function loadHospitalData() {
     try {
         showLoading(true);
         
-        const response = await fetch('/api/hospital-data');
+        const response = await fetch('/api/hospital-data', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
