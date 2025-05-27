@@ -332,3 +332,60 @@ def calculate_weekly_patterns(hospital_records):
         })
     
     return weekly_patterns
+
+
+@app.route('/api/error-report', methods=['POST'])
+def submit_error_report():
+    """Submit an error report"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('issue_type') or not data.get('description'):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Create new error report
+        error_report = ErrorReport(
+            issue_type=data['issue_type'],
+            description=data['description'],
+            contact_info=data.get('contact_info', '')
+        )
+        
+        db.session.add(error_report)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Error report submitted successfully',
+            'report_id': error_report.id
+        })
+        
+    except Exception as e:
+        logging.error(f"Error submitting report: {str(e)}")
+        return jsonify({'error': 'Failed to submit error report'}), 500
+
+
+@app.route('/api/error-reports')
+def get_error_reports():
+    """Get all error reports (for admin use)"""
+    try:
+        reports = ErrorReport.query.order_by(ErrorReport.timestamp.desc()).limit(50).all()
+        
+        reports_data = []
+        for report in reports:
+            reports_data.append({
+                'id': report.id,
+                'issue_type': report.issue_type,
+                'description': report.description,
+                'contact_info': report.contact_info,
+                'timestamp': report.timestamp.isoformat(),
+                'status': report.status
+            })
+        
+        return jsonify({
+            'success': True,
+            'reports': reports_data
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching reports: {str(e)}")
+        return jsonify({'error': 'Failed to fetch error reports'}), 500

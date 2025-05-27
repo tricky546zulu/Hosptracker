@@ -228,6 +228,70 @@ document.addEventListener('DOMContentLoaded', function() {
             loadHospitalChart('SCH');
         }
     }, 5 * 60 * 1000);
+    
+    // Handle error report form submission
+    const errorReportForm = document.getElementById('error-report-form');
+    if (errorReportForm) {
+        errorReportForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitErrorReport();
+        });
+    }
 });
+
+// Submit error report function
+function submitErrorReport() {
+    const issueType = document.getElementById('issue-type').value;
+    const description = document.getElementById('issue-description').value;
+    const contactInfo = document.getElementById('contact-info').value;
+    
+    if (!issueType || !description) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    const submitButton = document.querySelector('#error-report-form button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i data-feather="loader" class="me-1"></i>Submitting...';
+    
+    fetch('/api/error-report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            issue_type: issueType,
+            description: description,
+            contact_info: contactInfo
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            document.getElementById('report-success').classList.remove('d-none');
+            
+            // Reset form
+            document.getElementById('error-report-form').reset();
+            
+            // Hide success message after 5 seconds
+            setTimeout(() => {
+                document.getElementById('report-success').classList.add('d-none');
+            }, 5000);
+        } else {
+            alert('Failed to submit report: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting report:', error);
+        alert('Failed to submit report. Please try again.');
+    })
+    .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+        feather.replace(); // Re-render feather icons
+    });
+}
 </script>
 {% endblock %}
