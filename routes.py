@@ -344,11 +344,10 @@ def submit_error_report():
             return jsonify({'error': 'Missing required fields'}), 400
         
         # Create new error report
-        error_report = ErrorReport(
-            issue_type=data['issue_type'],
-            description=data['description'],
-            contact_info=data.get('contact_info', '')
-        )
+        error_report = ErrorReport()
+        error_report.issue_type = data['issue_type']
+        error_report.description = data['description']
+        error_report.contact_info = data.get('contact_info', '')
         
         db.session.add(error_report)
         db.session.commit()

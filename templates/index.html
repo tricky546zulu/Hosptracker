@@ -182,7 +182,7 @@
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
-                <i data-feather="bug" class="me-2"></i>
+                <i data-feather="alert-triangle" class="me-2"></i>
                 <h5 class="mb-0">Report Issues</h5>
             </div>
             <div class="card-body">
@@ -244,20 +244,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
     
-    // Auto-refresh every 5 minutes
+    // Auto-refresh every 10 minutes (optimized for deployment)
     setInterval(function() {
         loadHospitalData();
         updateScrapingStatus();
-    }, 5 * 60 * 1000);
+    }, 10 * 60 * 1000);
     
-    // Refresh charts every 5 minutes
+    // Refresh charts every 10 minutes (optimized for deployment)
     setInterval(function() {
         if (typeof loadHospitalChart === 'function') {
             loadHospitalChart('RUH');
             loadHospitalChart('SPH');
             loadHospitalChart('SCH');
+            loadHospitalChart('JPCH');
         }
-    }, 5 * 60 * 1000);
+    }, 10 * 60 * 1000);
     
     // Handle error report form submission
     const errorReportForm = document.getElementById('error-report-form');
