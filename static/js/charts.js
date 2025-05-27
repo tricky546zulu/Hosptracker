@@ -467,12 +467,7 @@ async function loadHospitalChart(hospitalCode) {
                     const saskHour = (utcDate.getUTCHours() - 6 + 24) % 24;
                     const saskMinute = utcDate.getUTCMinutes();
                     
-                    const timeLabel = `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
-                    
-                    // Debug logging for timestamp conversion
-                    console.log(`UTC: ${item.timestamp} -> Saskatchewan: ${timeLabel}`);
-                    
-                    return timeLabel;
+                    return `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
                 });
                 
                 const data = recentData.map(item => item.total_patients || 0);

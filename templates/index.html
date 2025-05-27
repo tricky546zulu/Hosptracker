@@ -148,6 +148,36 @@
         </div>
     </div>
 
+    <!-- Known Issues Section -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="info" class="me-2"></i>
+                <h5 class="mb-0">Known Issues</h5>
+                <span class="badge bg-warning ms-2">In Progress</span>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning d-flex align-items-start">
+                    <i data-feather="clock" class="me-2 mt-1"></i>
+                    <div>
+                        <strong>Time Display Synchronization</strong>
+                        <p class="mb-1 small">Chart timestamps are currently showing UTC time instead of Saskatchewan time (UTC-6). 
+                        Fix is in progress to properly display all times in Saskatchewan timezone.</p>
+                        <p class="mb-0 small text-muted">Expected fix: Next update cycle</p>
+                    </div>
+                </div>
+                <div class="alert alert-info d-flex align-items-start">
+                    <i data-feather="refresh-cw" class="me-2 mt-1"></i>
+                    <div>
+                        <strong>Data Update Schedule</strong>
+                        <p class="mb-0 small">New data is available approximately every 30-60 minutes when eHealth Saskatchewan publishes updated reports. 
+                        Manual refresh may not show newer data if no updates have been published.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Error Reporting Section -->
     <div class="col-lg-6">
         <div class="card">
