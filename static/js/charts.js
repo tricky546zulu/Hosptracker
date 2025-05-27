@@ -467,14 +467,17 @@ async function loadHospitalChart(hospitalCode) {
                 // Get last 15 unique data points for cleaner display
                 const recentData = filteredData.slice(0, 15).reverse();
                 
-                // Create consistent time labels based on the most recent timestamp
+                // Create consistent time labels in Saskatchewan time (UTC-6)
                 const labels = recentData.map(item => {
                     const date = new Date(item.timestamp);
-                    // Convert to Saskatchewan time (UTC-6)
-                    const saskTime = new Date(date.getTime() - (6 * 60 * 60 * 1000));
-                    const hours = saskTime.getUTCHours().toString().padStart(2, '0');
-                    const minutes = saskTime.getUTCMinutes().toString().padStart(2, '0');
-                    return `${hours}:${minutes}`;
+                    // Use toLocaleString with proper Saskatchewan timezone
+                    const saskTime = date.toLocaleString('en-CA', {
+                        timeZone: 'America/Regina',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    return saskTime;
                 });
                 
                 const data = recentData.map(item => item.total_patients || 0);
