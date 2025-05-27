@@ -55,8 +55,8 @@ def get_hospital_data():
 def get_hospital_history(hospital_code):
     """Get historical data for a specific hospital"""
     try:
-        # Get data from the last 24 hours
-        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        # Get data from the last 12 hours
+        cutoff_time = datetime.utcnow() - timedelta(hours=12)
         
         history = HospitalCapacity.query.filter(
             HospitalCapacity.hospital_code == hospital_code.upper(),
