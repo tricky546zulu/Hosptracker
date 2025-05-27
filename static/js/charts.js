@@ -212,9 +212,19 @@ function initializeCapacityChart() {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hospitals'
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     max: 80,
+                    title: {
+                        display: true,
+                        text: 'Number of Patients'
+                    },
                     ticks: {
                         callback: function(value) {
                             return value + ' patients';
@@ -385,10 +395,27 @@ function initializeMiniCharts() {
                         }
                     },
                     scales: {
-                        x: { display: false },
+                        x: { 
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            },
+                            ticks: {
+                                maxTicksLimit: 6,
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    return label.split(' ')[1]; // Show only time portion
+                                }
+                            }
+                        },
                         y: { 
-                            display: false,
-                            beginAtZero: true
+                            display: true,
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Patients'
+                            }
                         }
                     },
                     elements: {
