@@ -445,7 +445,7 @@ async function loadHospitalChart(hospitalCode) {
                 const filteredData = [];
                 const seenTimestamps = new Set();
                 
-                // Sort data by timestamp to ensure chronological order
+                // Sort data by timestamp to ensure chronological order (oldest first)
                 result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 
                 // Process data to get unique entries by minute
@@ -457,7 +457,7 @@ async function loadHospitalChart(hospitalCode) {
                     }
                 });
                 
-                // Get last 15 unique data points for cleaner display
+                // Get last 15 unique data points for cleaner display (most recent 15)
                 const recentData = filteredData.slice(-15);
                 
                 // Create consistent time labels in Saskatchewan time (UTC-6) 
@@ -467,7 +467,12 @@ async function loadHospitalChart(hospitalCode) {
                     const saskHour = (utcDate.getUTCHours() - 6 + 24) % 24;
                     const saskMinute = utcDate.getUTCMinutes();
                     
-                    return `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
+                    const timeLabel = `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
+                    
+                    // Debug logging for timestamp conversion
+                    console.log(`UTC: ${item.timestamp} -> Saskatchewan: ${timeLabel}`);
+                    
+                    return timeLabel;
                 });
                 
                 const data = recentData.map(item => item.total_patients || 0);
