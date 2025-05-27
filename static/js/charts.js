@@ -388,16 +388,7 @@ function initializeMiniCharts() {
                                 maxTicksLimit: 6,
                                 callback: function(value, index, values) {
                                     const label = this.getLabelForValue(value);
-                                    if (label && label.includes(' ')) {
-                                        const timePart = label.split(' ')[1];
-                                        // Convert to Saskatchewan time (UTC-6)
-                                        if (timePart && timePart.includes(':')) {
-                                            const [hours, minutes] = timePart.split(':');
-                                            let saskHour = parseInt(hours) - 6;
-                                            if (saskHour < 0) saskHour += 24;
-                                            return `${saskHour.toString().padStart(2, '0')}:${minutes}`;
-                                        }
-                                    }
+                                    // Just return the label as-is since it's already in 24-hour format from Saskatchewan time
                                     return label;
                                 }
                             }
@@ -481,6 +472,7 @@ async function loadHospitalChart(hospitalCode) {
                     return date.toLocaleTimeString('en-CA', { 
                         hour: '2-digit', 
                         minute: '2-digit',
+                        hour12: false,
                         timeZone: 'America/Regina' 
                     });
                 });
