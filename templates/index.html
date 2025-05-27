@@ -6,9 +6,14 @@
     <div>
         <h1 class="h3 mb-0">
             <i data-feather="activity" class="me-2"></i>
-            Emergency Department Capacity
+            Saskatchewan Hospital Emergency Department Monitor
         </h1>
-        <p class="text-muted mb-0">Real-time data from eHealth Saskatchewan</p>
+        <p class="text-muted mb-0">
+            Live patient counts extracted from official eHealth Saskatchewan PDF reports
+            <a href="https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf" target="_blank" class="ms-2">
+                <i data-feather="external-link" style="width: 14px; height: 14px;"></i>
+            </a>
+        </p>
     </div>
     <div class="d-flex align-items-center gap-2">
         <button id="refresh-btn" class="btn btn-outline-primary" onclick="refreshData()">
@@ -22,14 +27,15 @@
     </div>
 </div>
 
-<!-- Status Alert -->
+<!-- Data Source Information -->
 <div class="row mb-4">
     <div class="col-12">
         <div id="data-status-alert" class="alert alert-info d-flex align-items-center" role="alert">
             <i data-feather="info" class="me-2"></i>
             <div>
-                Real-time Emergency Department monitoring for Saskatoon hospitals. 
-                <span id="update-frequency">Automatically updated every 30 minutes from official eHealth Saskatchewan data.</span>
+                <strong>Data Source:</strong> Automated extraction from eHealth Saskatchewan PDF reports. 
+                Shows total patients currently in Emergency Departments.
+                <span id="update-frequency">Updates every 30-60 minutes when new reports are published.</span>
             </div>
         </div>
     </div>
@@ -133,7 +139,8 @@
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="bar-chart-2" class="me-2"></i>
-                <h5 class="mb-0">Hospital Comparison</h5>
+                <h5 class="mb-0">Current Emergency Department Patient Counts</h5>
+                <small class="text-muted ms-2">Live data from eHealth Saskatchewan</small>
             </div>
             <div class="card-body">
                 <canvas id="capacityChart" width="400" height="200"></canvas>
@@ -141,6 +148,49 @@
         </div>
     </div>
 
+    <!-- Error Reporting Section -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="bug" class="me-2"></i>
+                <h5 class="mb-0">Report Issues</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Found incorrect data or experiencing issues? Help us improve the system.</p>
+                <form id="error-report-form">
+                    <div class="mb-3">
+                        <label for="issue-type" class="form-label">Issue Type</label>
+                        <select class="form-select" id="issue-type" required>
+                            <option value="">Select issue type...</option>
+                            <option value="incorrect-data">Incorrect patient count</option>
+                            <option value="missing-data">Missing or outdated data</option>
+                            <option value="website-error">Website not working properly</option>
+                            <option value="time-sync">Time display issues</option>
+                            <option value="other">Other issue</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="issue-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="issue-description" rows="3" 
+                                  placeholder="Please describe the issue you encountered..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contact-info" class="form-label">Contact (optional)</label>
+                        <input type="email" class="form-control" id="contact-info" 
+                               placeholder="your.email@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-feather="send" class="me-1"></i>
+                        Submit Report
+                    </button>
+                </form>
+                <div id="report-success" class="alert alert-success mt-3 d-none">
+                    <i data-feather="check-circle" class="me-2"></i>
+                    Thank you! Your report has been submitted successfully.
+                </div>
+            </div>
+        </div>
+    </div>
 
 </div>
 

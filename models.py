@@ -20,3 +20,15 @@ class ScrapingLog(db.Model):
     
     def __repr__(self):
         return f'<ScrapingLog {self.timestamp}: {self.status}>'
+
+
+class ErrorReport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    issue_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    contact_info = db.Column(db.String(100))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='new')  # new, reviewing, resolved
+    
+    def __repr__(self):
+        return f'<ErrorReport {self.id}: {self.issue_type} at {self.timestamp}>'

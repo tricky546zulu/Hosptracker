@@ -1,8 +1,8 @@
 import logging
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from datetime import datetime, timedelta
 from app import app, db
-from models import HospitalCapacity, ScrapingLog
+from models import HospitalCapacity, ScrapingLog, ErrorReport
 from sqlalchemy import func, extract
 
 @app.route('/')
