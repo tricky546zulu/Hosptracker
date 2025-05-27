@@ -445,8 +445,11 @@ async function loadHospitalChart(hospitalCode) {
                 const filteredData = [];
                 const seenTimestamps = new Set();
                 
-                // Process data in reverse to get latest entries first
-                result.data.reverse().forEach(item => {
+                // Sort data by timestamp to ensure chronological order
+                result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                // Process data to get unique entries by minute
+                result.data.forEach(item => {
                     const timeKey = new Date(item.timestamp).toISOString().slice(0, 16); // Group by minute
                     if (!seenTimestamps.has(timeKey)) {
                         seenTimestamps.add(timeKey);
@@ -455,7 +458,7 @@ async function loadHospitalChart(hospitalCode) {
                 });
                 
                 // Get last 15 unique data points for cleaner display
-                const recentData = filteredData.slice(0, 15).reverse();
+                const recentData = filteredData.slice(-15);
                 
                 // Create consistent time labels in Saskatchewan time (UTC-6)
                 const labels = recentData.map(item => {
