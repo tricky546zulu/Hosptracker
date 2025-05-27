@@ -54,11 +54,34 @@ async function loadHospitalData() {
         const result = await response.json();
         
         if (result.status === 'success') {
+            // Store previous data before updating
+            const newPreviousData = {};
+            Object.keys(result.data).forEach(hospital => {
+                if (hospitalData[hospital]) {
+                    newPreviousData[hospital] = hospitalData[hospital].total_patients || 0;
+                } else {
+                    newPreviousData[hospital] = result.data[hospital].total_patients || 0;
+                }
+            });
+            
+            // Update with new data
             hospitalData = result.data;
+            
+            // Only update previousData if we actually have previous values to compare
+            if (Object.keys(previousData).length > 0) {
+                // Keep the existing previous data for comparison
+            } else {
+                // First load - set previous data to current data (no changes shown initially)
+                previousData = newPreviousData;
+            }
+            
             updateHospitalCards();
             updateCapacityChart();
             updateLastUpdatedTime(result.last_updated);
             hideAlerts();
+            
+            // Store current data as previous for next refresh
+            previousData = newPreviousData;
         } else {
             showError('Failed to load hospital data: ' + (result.message || 'Unknown error'));
         }
