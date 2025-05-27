@@ -369,7 +369,9 @@ function initializeMiniCharts() {
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    return ''; // Remove time reference from tooltip
+                                    // Show Saskatchewan time for this data point
+                                    const label = context[0].label;
+                                    return `${label} SK Time`;
                                 },
                                 label: function(context) {
                                     return `${context.parsed.y} patients`;
@@ -379,19 +381,7 @@ function initializeMiniCharts() {
                     },
                     scales: {
                         x: { 
-                            display: true,
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            },
-                            ticks: {
-                                maxTicksLimit: 6,
-                                callback: function(value, index, values) {
-                                    const label = this.getLabelForValue(value);
-                                    // Just return the label as-is since it's already in 24-hour format from Saskatchewan time
-                                    return label;
-                                }
-                            }
+                            display: false
                         },
                         y: { 
                             display: true,
