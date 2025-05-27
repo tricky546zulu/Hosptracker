@@ -470,14 +470,13 @@ async function loadHospitalChart(hospitalCode) {
                 // Create consistent time labels in Saskatchewan time (UTC-6)
                 const labels = recentData.map(item => {
                     const date = new Date(item.timestamp);
-                    // Use toLocaleString with proper Saskatchewan timezone
-                    const saskTime = date.toLocaleString('en-CA', {
-                        timeZone: 'America/Regina',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-                    return saskTime;
+                    // Convert UTC to Saskatchewan time manually (UTC-6)
+                    const utcTime = new Date(date.getTime());
+                    const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
+                    
+                    const hours = saskTime.getUTCHours().toString().padStart(2, '0');
+                    const minutes = saskTime.getUTCMinutes().toString().padStart(2, '0');
+                    return `${hours}:${minutes}`;
                 });
                 
                 const data = recentData.map(item => item.total_patients || 0);
