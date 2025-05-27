@@ -51,6 +51,11 @@ async function loadHospitalData() {
         showLoading(true);
         
         const response = await fetch('/api/hospital-data');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if (result.status === 'success') {
@@ -60,11 +65,11 @@ async function loadHospitalData() {
             updateLastUpdatedTime(result.last_updated);
             hideAlerts();
         } else {
-            showError('Failed to load hospital data: ' + (result.message || 'Unknown error'));
+            throw new Error(result.message || 'API returned error status');
         }
     } catch (error) {
         console.error('Error loading hospital data:', error);
-        showError('Network error while loading hospital data');
+        showError('Unable to connect to hospital data service. Please check your connection and try refreshing the page.');
     } finally {
         showLoading(false);
     }
