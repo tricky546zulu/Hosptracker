@@ -278,6 +278,7 @@
                             <div class="card-body text-center">
                                 <h6 class="card-title">Current Patients</h6>
                                 <h3 class="text-primary" id="modal-current-count">-</h3>
+                                <small class="text-muted">Most recent count from Emergency Department</small>
                             </div>
                         </div>
                     </div>
@@ -286,6 +287,7 @@
                             <div class="card-body text-center">
                                 <h6 class="card-title">7-Day Average</h6>
                                 <h3 class="text-info" id="modal-week-average">-</h3>
+                                <small class="text-muted">Average patients over past week</small>
                             </div>
                         </div>
                     </div>
@@ -294,7 +296,21 @@
                             <div class="card-body text-center">
                                 <h6 class="card-title">Peak This Week</h6>
                                 <h3 class="text-warning" id="modal-week-peak">-</h3>
+                                <small class="text-muted">Highest patient count this week</small>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Explanation -->
+                <div class="alert alert-info mb-3">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i data-feather="info" class="me-2"></i>
+                        </div>
+                        <div class="col">
+                            <strong>How to read this data:</strong> The chart shows patient counts over the past 7 days. 
+                            Compare current levels to the weekly average to see if the Emergency Department is busier or quieter than usual.
                         </div>
                     </div>
                 </div>
@@ -483,8 +499,14 @@ function createWeeklyChart(data) {
                 label: 'Emergency Department Patients',
                 data: patientData.reverse(),
                 borderColor: 'rgb(54, 162, 235)',
-                backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                tension: 0.4,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderWidth: 3,
+                pointBackgroundColor: 'rgb(54, 162, 235)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.3,
                 fill: true
             }]
         },
@@ -494,29 +516,73 @@ function createWeeklyChart(data) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    },
                     title: {
                         display: true,
-                        text: 'Number of Patients'
+                        text: 'Number of Patients',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        font: {
+                            size: 12
+                        }
                     }
                 },
                 x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    },
                     title: {
                         display: true,
-                        text: 'Date & Time (Saskatchewan Time)'
+                        text: 'Date & Time (Saskatchewan Time)',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    ticks: {
+                        font: {
+                            size: 10
+                        },
+                        maxRotation: 45
                     }
                 }
             },
             plugins: {
                 legend: {
-                    display: true
+                    display: true,
+                    labels: {
+                        font: {
+                            size: 14
+                        }
+                    }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
                     callbacks: {
+                        title: function(context) {
+                            return context[0].label;
+                        },
                         label: function(context) {
-                            return `Patients: ${context.parsed.y}`;
+                            return `Patients in Emergency Department: ${context.parsed.y}`;
                         }
                     }
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
             }
         }
     });
