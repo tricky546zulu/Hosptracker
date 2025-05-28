@@ -262,7 +262,7 @@
 
 <!-- Weekly History Modal -->
 <div class="modal fade" id="weeklyHistoryModal" tabindex="-1" aria-labelledby="weeklyHistoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="weeklyHistoryModalLabel">
@@ -314,8 +314,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="chart-container" style="height: 400px;">
-                    <canvas id="weeklyHistoryChart" width="800" height="400"></canvas>
+                <div class="chart-container" style="height: 500px;">
+                    <canvas id="weeklyHistoryChart"></canvas>
                 </div>
                 <div class="mt-3">
                     <small class="text-muted">
@@ -440,7 +440,10 @@ async function loadWeeklyHistoryData(hospitalCode) {
         if (result.status === 'success' && result.data.length > 0) {
             const data = result.data;
             
-            // Calculate statistics
+            // Filter to reduce clustering - take every 4th data point for cleaner view
+            const filteredData = data.filter((item, index) => index % 4 === 0).slice(0, 20);
+            
+            // Calculate statistics from all data
             const patientCounts = data.map(d => d.total_patients).filter(count => count !== null);
             const current = patientCounts[0] || 0;
             const average = patientCounts.length > 0 ? Math.round(patientCounts.reduce((a, b) => a + b, 0) / patientCounts.length) : 0;
@@ -451,8 +454,8 @@ async function loadWeeklyHistoryData(hospitalCode) {
             document.getElementById('modal-week-average').textContent = average;
             document.getElementById('modal-week-peak').textContent = peak;
             
-            // Create weekly chart
-            createWeeklyChart(data);
+            // Create weekly chart with filtered data
+            createWeeklyChart(filteredData);
         } else {
             // Show no data message
             document.getElementById('modal-current-count').textContent = '-';
@@ -473,7 +476,7 @@ function createWeeklyChart(data) {
         window.weeklyChart.destroy();
     }
     
-    // Prepare data for chart
+    // Prepare simplified labels for better mobile display
     const labels = data.map(item => {
         const date = new Date(item.timestamp);
         // Convert to Saskatchewan time
@@ -481,12 +484,12 @@ function createWeeklyChart(data) {
         const saskDate = new Date(date);
         saskDate.setUTCHours(saskHour);
         
-        return saskDate.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        // Simplified format: "May 28, 2PM" instead of full date/time
+        const month = saskDate.toLocaleDateString('en-US', { month: 'short' });
+        const day = saskDate.getDate();
+        const hour = saskHour > 12 ? (saskHour - 12) + 'PM' : (saskHour === 0 ? '12AM' : saskHour + 'AM');
+        
+        return `${month} ${day}, ${hour}`;
     });
     
     const patientData = data.map(item => item.total_patients || 0);
@@ -547,9 +550,10 @@ function createWeeklyChart(data) {
                     },
                     ticks: {
                         font: {
-                            size: 10
+                            size: 11
                         },
-                        maxRotation: 45
+                        maxRotation: 0,
+                        maxTicksLimit: 8
                     }
                 }
             },
