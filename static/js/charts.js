@@ -32,16 +32,16 @@ function initializeDashboard() {
 // Manual refresh function
 function refreshData() {
     const refreshBtn = document.getElementById('refresh-btn');
-    const icon = refreshBtn ? refreshBtn.querySelector('i') : null;
+    const icon = refreshBtn.querySelector('i');
     
     // Show loading state
-    if (refreshBtn) refreshBtn.disabled = true;
-    if (icon) icon.style.animation = 'spin 1s linear infinite';
+    refreshBtn.disabled = true;
+    icon.style.animation = 'spin 1s linear infinite';
     
     loadHospitalData().finally(() => {
         // Reset button state
-        if (refreshBtn) refreshBtn.disabled = false;
-        if (icon) icon.style.animation = '';
+        refreshBtn.disabled = false;
+        icon.style.animation = '';
     });
 }
 
@@ -53,18 +53,18 @@ async function loadHospitalData() {
         const response = await fetch('/api/hospital-data');
         const result = await response.json();
         
-        if (result && result.status === 'success' && result.data) {
+        if (result.status === 'success') {
             hospitalData = result.data;
             updateHospitalCards();
             updateCapacityChart();
             updateLastUpdatedTime(result.last_updated);
             hideAlerts();
         } else {
-            showError('No hospital data available');
+            showError('Failed to load hospital data: ' + (result.message || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error loading hospital data:', error);
-        showError('Connection error - please refresh the page');
+        showError('Network error while loading hospital data');
     } finally {
         showLoading(false);
     }
