@@ -458,8 +458,8 @@ async function loadHospitalChart(hospitalCode) {
                     }
                 });
                 
-                // Get last 15 unique data points for cleaner display (most recent 15)
-                const recentData = filteredData.slice(-15);
+                // Get last 20 unique data points for better coverage, then take most recent 15
+                const recentData = filteredData.slice(-20).slice(-15);
                 
                 // Create consistent time labels in Saskatchewan time (UTC-6) 
                 const labels = recentData.map(item => {
@@ -753,12 +753,16 @@ async function loadWeeklyTrendData(hospitalCode) {
         const now = new Date();
         const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
         
-        // Filter to last 7 days
+        // Filter to last 7 days (get more data to ensure we have coverage)
         const weekData = sortedData.filter(item => new Date(item.timestamp) >= sevenDaysAgo);
         
         // Group by day and get daily data points
         const dailyData = {};
         weekData.forEach(item => {
+            if (item.total_patients === null || item.total_patients === undefined) {
+                return; // Skip null/undefined values
+            }
+            
             const date = new Date(item.timestamp);
             // Convert to Saskatchewan time
             const saskTime = new Date(date.getTime() - (6 * 60 * 60 * 1000));
@@ -788,12 +792,12 @@ async function loadWeeklyTrendData(hospitalCode) {
             
             labels.push(dayName);
             
-            // Use most recent value for that day, or 0 if no data
+            // Use most recent value for that day, or null if no data (Chart.js will skip null points)
             if (dailyData[dayKey] && dailyData[dayKey].length > 0) {
                 // Get the most recent reading for that day
                 values.push(dailyData[dayKey][dailyData[dayKey].length - 1]);
             } else {
-                values.push(0);
+                values.push(null);
             }
         }
         
