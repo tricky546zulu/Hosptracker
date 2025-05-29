@@ -168,8 +168,21 @@ class HospitalDataScraper:
                                     'total_patients': total_patients
                                 }
                     elif hospital_code == 'RUH':
-                        # For RUH, use the last number as Total
+                        # For RUH, use the last number as Total but validate it's reasonable
+                        # RUH typically has 60-90 patients in Emergency Department
                         total_patients = int(numbers[-1])
+                        # If the number seems unreasonable, try the second-to-last number
+                        if total_patients < 30 or total_patients > 120:
+                            if len(numbers) >= 2:
+                                alt_total = int(numbers[-2])
+                                if 30 <= alt_total <= 120:
+                                    total_patients = alt_total
+                        
+                        # Final validation - if still unreasonable, skip this reading
+                        if total_patients < 20 or total_patients > 150:
+                            logging.warning(f"RUH total_patients {total_patients} seems unreasonable, skipping")
+                            return None
+                            
                         return {
                             'hospital_code': hospital_code,
                             'hospital_name': self._get_full_hospital_name(hospital_code),
