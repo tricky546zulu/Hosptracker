@@ -61,12 +61,6 @@
                 <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
                     <canvas id="ruh-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
                 </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="showWeeklyHistory('RUH')">
-                        <i data-feather="calendar" class="me-1" style="width: 14px; height: 14px;"></i>
-                        Weekly History
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -88,12 +82,6 @@
                 </div>
                 <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
                     <canvas id="sph-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="showWeeklyHistory('SPH')">
-                        <i data-feather="calendar" class="me-1" style="width: 14px; height: 14px;"></i>
-                        Weekly History
-                    </button>
                 </div>
             </div>
         </div>
@@ -117,12 +105,6 @@
                 <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
                     <canvas id="sch-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
                 </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="showWeeklyHistory('SCH')">
-                        <i data-feather="calendar" class="me-1" style="width: 14px; height: 14px;"></i>
-                        Weekly History
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -144,12 +126,6 @@
                 </div>
                 <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
                     <canvas id="jpch-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="showWeeklyHistory('JPCH')">
-                        <i data-feather="calendar" class="me-1" style="width: 14px; height: 14px;"></i>
-                        Weekly History
-                    </button>
                 </div>
             </div>
         </div>
@@ -259,49 +235,6 @@
     <i data-feather="alert-triangle" class="me-2"></i>
     No recent hospital data available. The system may be initializing or experiencing issues with data collection.
 </div>
-
-<!-- Weekly History Modal -->
-<div class="modal fade" id="weeklyHistoryModal" tabindex="-1" aria-labelledby="weeklyHistoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="weeklyHistoryModalLabel">
-                    <i data-feather="calendar" class="me-2"></i>
-                    Weekly History - <span id="modal-hospital-name">Hospital</span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Minimal stats in single row -->
-                <div class="d-flex justify-content-around mb-3 p-2 bg-light rounded">
-                    <div class="text-center">
-                        <small class="text-muted d-block">Current</small>
-                        <strong id="modal-current-count" class="text-primary">-</strong>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted d-block">7-Day Avg</small>
-                        <strong id="modal-week-average" class="text-info">-</strong>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted d-block">Week Peak</small>
-                        <strong id="modal-week-peak" class="text-warning">-</strong>
-                    </div>
-                </div>
-                
-                <!-- Large chart taking most of the space -->
-                <div class="chart-container" style="height: 60vh; min-height: 400px;">
-                    <canvas id="weeklyHistoryChart"></canvas>
-                </div>
-                
-                <div class="mt-2">
-                    <small class="text-muted">
-                        Emergency Department patient counts from past 7 days
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -389,181 +322,6 @@ function submitErrorReport() {
         submitButton.disabled = false;
         submitButton.innerHTML = originalText;
         feather.replace(); // Re-render feather icons
-    });
-}
-
-// Show weekly history modal
-function showWeeklyHistory(hospitalCode) {
-    const hospitalName = getFullHospitalName(hospitalCode);
-    document.getElementById('modal-hospital-name').textContent = hospitalName;
-    
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('weeklyHistoryModal'));
-    modal.show();
-    
-    // Load weekly data
-    loadWeeklyHistoryData(hospitalCode);
-}
-
-// Load weekly history data
-async function loadWeeklyHistoryData(hospitalCode) {
-    try {
-        // Get data for past 7 days
-        const response = await fetch(`/api/hospital/${hospitalCode}/history?days=7`);
-        const result = await response.json();
-        
-        if (result.status === 'success' && result.data.length > 0) {
-            const data = result.data;
-            
-            // Filter to reduce clustering - take every 4th data point for cleaner view
-            const filteredData = data.filter((item, index) => index % 4 === 0).slice(0, 20);
-            
-            // Calculate statistics from all data
-            const patientCounts = data.map(d => d.total_patients).filter(count => count !== null);
-            const current = patientCounts[0] || 0;
-            const average = patientCounts.length > 0 ? Math.round(patientCounts.reduce((a, b) => a + b, 0) / patientCounts.length) : 0;
-            const peak = patientCounts.length > 0 ? Math.max(...patientCounts) : 0;
-            
-            // Update modal stats
-            document.getElementById('modal-current-count').textContent = current;
-            document.getElementById('modal-week-average').textContent = average;
-            document.getElementById('modal-week-peak').textContent = peak;
-            
-            // Create weekly chart with filtered data
-            createWeeklyChart(filteredData);
-        } else {
-            // Show no data message
-            document.getElementById('modal-current-count').textContent = '-';
-            document.getElementById('modal-week-average').textContent = '-';
-            document.getElementById('modal-week-peak').textContent = '-';
-        }
-    } catch (error) {
-        console.error('Error loading weekly history:', error);
-    }
-}
-
-// Create weekly history chart
-function createWeeklyChart(data) {
-    const ctx = document.getElementById('weeklyHistoryChart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.weeklyChart) {
-        window.weeklyChart.destroy();
-    }
-    
-    // Prepare simplified labels for better mobile display
-    const labels = data.map(item => {
-        const date = new Date(item.timestamp);
-        // Convert to Saskatchewan time
-        const saskHour = (date.getUTCHours() - 6 + 24) % 24;
-        const saskDate = new Date(date);
-        saskDate.setUTCHours(saskHour);
-        
-        // Simplified format: "May 28, 2PM" instead of full date/time
-        const month = saskDate.toLocaleDateString('en-US', { month: 'short' });
-        const day = saskDate.getDate();
-        const hour = saskHour > 12 ? (saskHour - 12) + 'PM' : (saskHour === 0 ? '12AM' : saskHour + 'AM');
-        
-        return `${month} ${day}, ${hour}`;
-    });
-    
-    const patientData = data.map(item => item.total_patients || 0);
-    
-    window.weeklyChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels.reverse(), // Show oldest to newest
-            datasets: [{
-                label: 'Emergency Department Patients',
-                data: patientData.reverse(),
-                borderColor: 'rgb(54, 162, 235)',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderWidth: 3,
-                pointBackgroundColor: 'rgb(54, 162, 235)',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                tension: 0.3,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Number of Patients',
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    },
-                    ticks: {
-                        font: {
-                            size: 12
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        color: 'rgba(0,0,0,0.1)'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Date & Time (Saskatchewan Time)',
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    },
-                    ticks: {
-                        font: {
-                            size: 11
-                        },
-                        maxRotation: 0,
-                        maxTicksLimit: 8
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    labels: {
-                        font: {
-                            size: 14
-                        }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    titleFont: {
-                        size: 14
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    callbacks: {
-                        title: function(context) {
-                            return context[0].label;
-                        },
-                        label: function(context) {
-                            return `Patients in Emergency Department: ${context.parsed.y}`;
-                        }
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            }
-        }
     });
 }
 </script>

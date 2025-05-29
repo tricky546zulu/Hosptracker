@@ -84,41 +84,6 @@ def get_hospital_history(hospital_code):
             'message': f'Failed to retrieve history for {hospital_code}'
         }), 500
 
-
-@app.route('/api/hospital/<hospital_code>/history')
-def get_hospital_weekly_history(hospital_code):
-    """Get weekly historical data for a specific hospital"""
-    try:
-        # Get number of days from query parameter, default to 7 days
-        days = request.args.get('days', 7, type=int)
-        cutoff_time = datetime.utcnow() - timedelta(days=days)
-        
-        history = HospitalCapacity.query.filter(
-            HospitalCapacity.hospital_code == hospital_code.upper(),
-            HospitalCapacity.timestamp >= cutoff_time
-        ).order_by(HospitalCapacity.timestamp.desc()).all()
-        
-        history_data = []
-        for record in history:
-            history_data.append({
-                'timestamp': record.timestamp.isoformat(),
-                'total_patients': record.total_patients or 0
-            })
-        
-        return jsonify({
-            'status': 'success',
-            'hospital_code': hospital_code.upper(),
-            'hospital_name': get_hospital_name(hospital_code.upper()),
-            'data': history_data
-        })
-        
-    except Exception as e:
-        logging.error(f"Error getting weekly hospital history for {hospital_code}: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': f'Failed to retrieve weekly history for {hospital_code}'
-        }), 500
-
 @app.route('/api/scraping-status')
 def get_scraping_status():
     """Get the latest scraping status"""
