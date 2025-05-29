@@ -449,8 +449,11 @@ async function loadHospitalChart(hospitalCode) {
                 // Sort data by timestamp to ensure chronological order (oldest first)
                 result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 
-                // Process data to get unique entries by minute
+                // Process data to get unique entries by minute, filtering out invalid values
                 result.data.forEach(item => {
+                    if (item.total_patients === null || item.total_patients === undefined || item.total_patients < 5) {
+                        return; // Skip invalid or suspiciously low values
+                    }
                     const timeKey = new Date(item.timestamp).toISOString().slice(0, 16); // Group by minute
                     if (!seenTimestamps.has(timeKey)) {
                         seenTimestamps.add(timeKey);
@@ -651,6 +654,13 @@ function createWeeklyTrendChart(hospitalCode, color, hospitalName) {
     
     // Load 7 days of data for this hospital
     loadWeeklyTrendData(hospitalCode).then(data => {
+        if (!data || data.labels.length === 0) {
+            console.log(`No weekly data available for ${hospitalCode}`);
+            return;
+        }
+        
+        console.log(`Creating weekly chart for ${hospitalCode} with ${data.labels.length} data points`);
+        
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -792,14 +802,21 @@ async function loadWeeklyTrendData(hospitalCode) {
             
             labels.push(dayName);
             
-            // Use most recent value for that day, or null if no data (Chart.js will skip null points)
+            // Use most recent authentic value for that day
             if (dailyData[dayKey] && dailyData[dayKey].length > 0) {
                 // Get the most recent reading for that day
-                values.push(dailyData[dayKey][dailyData[dayKey].length - 1]);
+                const dayValues = dailyData[dayKey].filter(val => val !== null && val !== undefined);
+                if (dayValues.length > 0) {
+                    values.push(dayValues[dayValues.length - 1]);
+                } else {
+                    values.push(null);
+                }
             } else {
                 values.push(null);
             }
         }
+        
+        console.log(`Weekly data for ${hospitalCode}:`, { labels, values });
         
         return { labels, values };
         
