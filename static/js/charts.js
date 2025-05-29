@@ -22,6 +22,7 @@ function initializeDashboard() {
         // Initialize individual hospital charts
         setTimeout(() => {
             initializeMiniCharts();
+            initializeWeeklyTrendCharts();
         }, 200);
         
     } catch (error) {
@@ -616,7 +617,190 @@ function getFullHospitalName(code) {
     const nameMap = {
         'RUH': 'Royal University Hospital',
         'SPH': "St. Paul's Hospital",
-        'SCH': 'Saskatoon City Hospital'
+        'SCH': 'Saskatoon City Hospital',
+        'JPCH': 'Jim Pattison Children\'s Hospital'
     };
     return nameMap[code] || code;
+}
+
+// Initialize weekly trend charts for all hospitals
+function initializeWeeklyTrendCharts() {
+    const hospitals = [
+        { code: 'RUH', color: '#0d6efd', name: 'Royal University Hospital' },
+        { code: 'SPH', color: '#198754', name: 'St. Paul\'s Hospital' },
+        { code: 'SCH', color: '#fd7e14', name: 'Saskatoon City Hospital' },
+        { code: 'JPCH', color: '#0dcaf0', name: 'Jim Pattison Children\'s Hospital' }
+    ];
+
+    hospitals.forEach(hospital => {
+        createWeeklyTrendChart(hospital.code, hospital.color, hospital.name);
+    });
+}
+
+// Create a weekly trend chart for a specific hospital
+function createWeeklyTrendChart(hospitalCode, color, hospitalName) {
+    const canvasId = `${hospitalCode.toLowerCase()}-weekly-chart`;
+    const canvas = document.getElementById(canvasId);
+    
+    if (!canvas) {
+        console.error(`Canvas not found: ${canvasId}`);
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Load 7 days of data for this hospital
+    loadWeeklyTrendData(hospitalCode).then(data => {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: `${hospitalName} Patients`,
+                    data: data.values,
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: color,
+                        borderWidth: 1,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return `${context.parsed.y} patients in Emergency Department`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            },
+                            callback: function(value) {
+                                return Math.round(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }).catch(error => {
+        console.error(`Error loading weekly trend for ${hospitalCode}:`, error);
+    });
+}
+
+// Load 7 days of authentic hospital data for weekly trends
+async function loadWeeklyTrendData(hospitalCode) {
+    try {
+        const response = await fetch(`/api/hospital-history/${hospitalCode}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.data || result.data.length === 0) {
+            return { labels: [], values: [] };
+        }
+        
+        // Sort data chronologically and get last 7 days
+        const sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+        
+        // Filter to last 7 days
+        const weekData = sortedData.filter(item => new Date(item.timestamp) >= sevenDaysAgo);
+        
+        // Group by day and get daily data points
+        const dailyData = {};
+        weekData.forEach(item => {
+            const date = new Date(item.timestamp);
+            // Convert to Saskatchewan time
+            const saskTime = new Date(date.getTime() - (6 * 60 * 60 * 1000));
+            const dayKey = saskTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+            
+            if (!dailyData[dayKey]) {
+                dailyData[dayKey] = [];
+            }
+            dailyData[dayKey].push(item.total_patients);
+        });
+        
+        // Create labels and values for the last 7 days
+        const labels = [];
+        const values = [];
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+            const saskDate = new Date(date.getTime() - (6 * 60 * 60 * 1000));
+            const dayKey = saskDate.toISOString().split('T')[0];
+            
+            // Format label as day name
+            const dayName = saskDate.toLocaleDateString('en-US', { 
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            labels.push(dayName);
+            
+            // Use most recent value for that day, or 0 if no data
+            if (dailyData[dayKey] && dailyData[dayKey].length > 0) {
+                // Get the most recent reading for that day
+                values.push(dailyData[dayKey][dailyData[dayKey].length - 1]);
+            } else {
+                values.push(0);
+            }
+        }
+        
+        return { labels, values };
+        
+    } catch (error) {
+        console.error(`Error loading weekly data for ${hospitalCode}:`, error);
+        return { labels: [], values: [] };
+    }
 }
