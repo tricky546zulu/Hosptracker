@@ -107,17 +107,46 @@ class HospitalDataScraper:
         """Parse Emergency Department data from PDF text"""
         hospital_data = []
         
-        # Hospital codes to look for
-        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
-        
-        for hospital_code in hospitals:
-            logging.info(f"Processing {hospital_code} for Emergency Department data...")
-            hospital_info = self._extract_numbers_from_line_context(text, 0, hospital_code)
-            if hospital_info:
-                logging.info(f"Successfully extracted data for {hospital_code}: {hospital_info}")
-                hospital_data.append(hospital_info)
-            else:
-                logging.warning(f"No data extracted for {hospital_code}")
+        # Process all lines to find hospital data
+        for i, line in enumerate(text):
+            line = line.strip()
+            
+            # Check each hospital code
+            for hospital_code in ['RUH', 'SPH', 'SCH', 'JPCH']:
+                if hospital_code in line and any(c.isdigit() for c in line):
+                    # Skip specialty department lines, but allow main hospital entries
+                    if any(specialty in line.upper() for specialty in ['CARDIOSCIENCES', 'ADDICTION']) and 'ED' in line.upper():
+                        logging.info(f"Skipping specialty department line: {line}")
+                        continue
+                    
+                    # For SCH, skip only if it's clearly a specialty line, not the main ED entry
+                    if hospital_code == 'SCH' and 'NEUROSCIENCES' in line.upper() and line.strip().endswith('3'):
+                        logging.info(f"Skipping SCH specialty department line: {line}")
+                        continue
+                    
+                    # Extract numbers from this line
+                    numbers = re.findall(r'\b\d+\b', line)
+                    if numbers:
+                        numbers = [int(n) for n in numbers]
+                        logging.info(f"{hospital_code}: Found numbers {numbers} in line: {line}")
+                        
+                        # Use the last number as Emergency Department Total
+                        total_patients = numbers[-1]
+                        
+                        # Apply validation for RUH
+                        if hospital_code == 'RUH' and (total_patients < 20 or total_patients > 200):
+                            logging.warning(f"RUH: Patient count {total_patients} outside reasonable range (20-200), skipping")
+                            continue
+                        
+                        hospital_info = {
+                            'hospital_code': hospital_code,
+                            'hospital_name': self._get_full_hospital_name(hospital_code),
+                            'total_patients': total_patients
+                        }
+                        
+                        logging.info(f"Successfully extracted data for {hospital_code}: {hospital_info}")
+                        hospital_data.append(hospital_info)
+                        break  # Found this hospital, move to next line
         
         return hospital_data
     
