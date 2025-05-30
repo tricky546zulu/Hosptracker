@@ -120,31 +120,14 @@ class HospitalDataScraper:
                         logging.info(f"Skipping specialty department line: {line}")
                         continue
                     
-                    # For SPH and SCH lines with specialty info at the end, still extract main ED data
-                    if hospital_code == 'SPH' and 'ADDICTION SERVICES' in line.upper():
-                        # This line contains main SPH ED data followed by specialty info
-                        # Extract the Total column (4th number) which represents main ED total
+                    # For hospital lines with specialty info at the end, extract main ED data correctly
+                    # Format: "HOSPITAL Admitted Active Consults Total SpecialtyName ED Number"
+                    if any(specialty in line.upper() for specialty in ['ADDICTION SERVICES', 'NEUROSCIENCES ED', 'ONCOLOGY ED', 'SURGERY ED']):
                         numbers = re.findall(r'\b\d+\b', line)
                         if len(numbers) >= 4:
-                            total_patients = int(numbers[3])  # 4th number is the Total for main ED
-                            
-                            hospital_info = {
-                                'hospital_code': hospital_code,
-                                'hospital_name': self._get_full_hospital_name(hospital_code),
-                                'total_patients': total_patients
-                            }
-                            
-                            logging.info(f"Successfully extracted main ED data for {hospital_code}: {hospital_info}")
-                            hospital_data.append(hospital_info)
-                            break
-                        continue
-                    
-                    if hospital_code == 'SCH' and 'NEUROSCIENCES' in line.upper():
-                        # This line contains main SCH ED data followed by specialty info
-                        # Extract the Total column (4th number) which represents main ED total
-                        numbers = re.findall(r'\b\d+\b', line)
-                        if len(numbers) >= 4:
-                            total_patients = int(numbers[3])  # 4th number is the Total for main ED
+                            # The 4th number is always the Total for main Emergency Department
+                            # regardless of specialty numbers that follow
+                            total_patients = int(numbers[3])
                             
                             hospital_info = {
                                 'hospital_code': hospital_code,
