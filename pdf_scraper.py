@@ -168,22 +168,28 @@ class HospitalDataScraper:
                                     'total_patients': total_patients
                                 }
                     elif hospital_code == 'RUH':
-                        # For RUH, use the last number as Total but validate it's reasonable
+                        # For RUH, search for realistic Emergency Department numbers
                         # RUH typically has 55+ patients in Emergency Department (often 60-90)
-                        total_patients = int(numbers[-1])
+                        total_patients = None
                         
-                        # If the number seems too low, try other numbers in the line
-                        if total_patients < 50:
-                            # Try all numbers in descending order to find a realistic value
+                        # Try all numbers to find one that matches RUH's typical volume
+                        for num in reversed(numbers):
+                            candidate = int(num)
+                            if 50 <= candidate <= 150:
+                                total_patients = candidate
+                                break
+                        
+                        # If no realistic number found, try a lower threshold but still reasonable
+                        if total_patients is None:
                             for num in reversed(numbers):
                                 candidate = int(num)
-                                if 50 <= candidate <= 150:
+                                if 45 <= candidate <= 200:
                                     total_patients = candidate
                                     break
                         
-                        # Strong validation - RUH is a major hospital, must have substantial ED volume
-                        if total_patients < 45 or total_patients > 200:
-                            logging.warning(f"RUH total_patients {total_patients} seems unreasonable for major hospital, skipping")
+                        # Absolute validation - RUH must have substantial ED volume, no exceptions
+                        if total_patients is None or total_patients < 45:
+                            logging.warning(f"RUH: No realistic patient count found in numbers {numbers}, skipping entirely")
                             return None
                             
                         return {
