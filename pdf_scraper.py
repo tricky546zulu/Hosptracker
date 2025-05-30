@@ -74,18 +74,19 @@ class HospitalDataScraper:
             # Split into lines for processing
             lines = all_text.split('\n')
             
-            # Find Emergency Department section
+            # Find Emergency Department section - look for broader patterns
             ed_section_found = False
             for i, line in enumerate(lines):
-                if 'Emergency Department' in line and 'Total' in line:
-                    logging.info(f"Found Emergency Department section at line {i}")
-                    ed_section_found = True
+                # Look for Emergency Department table or similar patterns
+                if any(keyword in line.upper() for keyword in ['EMERGENCY', 'TOTAL', 'RUH', 'SPH', 'SCH', 'JPCH']):
+                    logging.info(f"Found potential Emergency Department data at line {i}: {line[:100]}")
                     
-                    # Parse Emergency Department data
-                    ed_data = self._parse_emergency_department_data(lines[i:i+20])
+                    # Parse Emergency Department data from broader context
+                    ed_data = self._parse_emergency_department_data(lines[max(0, i-5):i+20])
                     if ed_data:
                         hospital_data.extend(ed_data)
-                    break
+                        ed_section_found = True
+                        break
             
             if not ed_section_found:
                 logging.warning("Emergency Department section not found in PDF - no data will be saved")
@@ -124,16 +125,16 @@ class HospitalDataScraper:
                     numbers = [int(n) for n in numbers]
                     
                     if hospital_code == 'RUH':
-                        # RUH validation - must have realistic ED volume
+                        # RUH validation - must have realistic ED volume  
                         total_patients = None
                         for candidate in numbers:
-                            if 45 <= candidate <= 200:
+                            if 20 <= candidate <= 200:
                                 total_patients = candidate
                                 break
                         
-                        # Absolute validation - RUH must have substantial ED volume, no exceptions
-                        if total_patients is None or total_patients < 45:
-                            logging.warning(f"RUH: No realistic patient count found in numbers {numbers}, skipping entirely")
+                        # Validation - RUH Emergency Department should have reasonable volume
+                        if total_patients is None or total_patients < 20 or total_patients > 200:
+                            logging.warning(f"RUH: Patient count {total_patients} outside reasonable range (20-200), skipping")
                             return None
                         
                         # Additional safety check - log successful extraction for monitoring
