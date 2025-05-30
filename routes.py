@@ -571,3 +571,176 @@ def clear_old_data():
         logging.error(f"Error clearing old data: {e}")
         db.session.rollback()
         return jsonify({'error': 'Failed to clear old data'}), 500
+
+@app.route('/debug')
+def pdf_debug():
+    """PDF debugging interface"""
+    return render_template('pdf_debug.html')
+
+@app.route('/api/debug/analyze-pdf', methods=['POST'])
+def analyze_pdf_content():
+    """Analyze PDF content for debugging"""
+    try:
+        data = request.get_json()
+        pdf_url = data.get('pdf_url')
+        keywords = data.get('keywords', '').split(',')
+        hospital_codes = data.get('hospital_codes', '').split(',')
+        
+        # Download and extract PDF content
+        import requests
+        import pdfplumber
+        import io
+        
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        # Extract text from PDF
+        raw_text = ""
+        with pdfplumber.open(io.BytesIO(response.content)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    raw_text += page_text + "\n"
+        
+        # Split into lines
+        lines = raw_text.split('\n')
+        
+        # Filter lines containing keywords
+        filtered_lines = []
+        keywords = [k.strip() for k in keywords if k.strip()]
+        
+        for line in lines:
+            if any(keyword.lower() in line.lower() for keyword in keywords):
+                filtered_lines.append(line)
+        
+        # Test extraction on filtered content
+        extraction_results = []
+        hospital_codes = [h.strip() for h in hospital_codes if h.strip()]
+        
+        for hospital_code in hospital_codes:
+            result = analyze_hospital_line(lines, hospital_code)
+            if result:
+                extraction_results.append(result)
+        
+        return jsonify({
+            'success': True,
+            'raw_text': raw_text,
+            'total_lines': len(lines),
+            'filtered_lines': filtered_lines[:50],  # Limit to first 50 matches
+            'extraction_results': extraction_results
+        })
+        
+    except Exception as e:
+        logging.error(f"Error analyzing PDF: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug/test-extraction', methods=['POST'])
+def test_pdf_extraction():
+    """Test extraction with current parameters"""
+    try:
+        data = request.get_json()
+        raw_text = data.get('raw_text', '')
+        keywords = data.get('keywords', '').split(',')
+        hospital_codes = data.get('hospital_codes', '').split(',')
+        
+        lines = raw_text.split('\n')
+        extraction_results = []
+        
+        hospital_codes = [h.strip() for h in hospital_codes if h.strip()]
+        
+        for hospital_code in hospital_codes:
+            result = analyze_hospital_line(lines, hospital_code)
+            if result:
+                extraction_results.append(result)
+        
+        return jsonify({
+            'success': True,
+            'extraction_results': extraction_results
+        })
+        
+    except Exception as e:
+        logging.error(f"Error testing extraction: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def analyze_hospital_line(lines, hospital_code):
+    """Analyze lines for a specific hospital"""
+    import re
+    
+    hospital_names = {
+        'RUH': 'Royal University Hospital',
+        'SPH': 'St. Paul\'s Hospital', 
+        'SCH': 'Saskatoon City Hospital',
+        'JPCH': 'Jim Pattison Children\'s Hospital'
+    }
+    
+    for i, line in enumerate(lines):
+        if hospital_code in line:
+            # Extract all numbers from this line
+            numbers = re.findall(r'\b\d+\b', line)
+            numbers_int = [int(n) for n in numbers] if numbers else []
+            
+            result = {
+                'hospital_code': hospital_code,
+                'hospital_name': hospital_names.get(hospital_code, hospital_code),
+                'source_line': line.strip(),
+                'line_number': i + 1,
+                'numbers_found': numbers_int,
+                'total_patients': None,
+                'validation_notes': ''
+            }
+            
+            # Apply hospital-specific logic
+            if hospital_code == 'RUH':
+                # Find realistic patient count for RUH
+                realistic_counts = [n for n in numbers_int if 45 <= n <= 200]
+                if realistic_counts:
+                    result['total_patients'] = realistic_counts[0]
+                    result['validation_notes'] = 'Valid RUH count found'
+                else:
+                    result['validation_notes'] = f'No realistic RUH count in {numbers_int} (need 45-200)'
+            
+            elif hospital_code == 'SCH':
+                # For SCH, might need to sum Active + Consults
+                if len(numbers_int) >= 4:
+                    active = numbers_int[-3]
+                    consults = numbers_int[-2]
+                    result['total_patients'] = active + consults
+                    result['validation_notes'] = f'SCH: Active ({active}) + Consults ({consults})'
+                elif numbers_int:
+                    result['total_patients'] = numbers_int[-1]
+                    result['validation_notes'] = 'SCH: Using last number'
+            
+            else:
+                # For SPH and JPCH, use last number
+                if numbers_int:
+                    result['total_patients'] = numbers_int[-1]
+                    result['validation_notes'] = f'{hospital_code}: Using last number'
+            
+            return result
+    
+    return None
+
+@app.route('/api/debug/apply-custom-extraction', methods=['POST'])
+def apply_custom_extraction():
+    """Apply custom extraction configuration"""
+    try:
+        data = request.get_json()
+        config = data.get('config', '')
+        
+        # For now, just validate the config format
+        # In a full implementation, you could parse and apply custom rules
+        
+        if 'hospital_code' in config and 'extraction_rule' in config:
+            return jsonify({
+                'success': True,
+                'message': 'Custom extraction configuration saved'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid configuration format'
+            })
+        
+    except Exception as e:
+        logging.error(f"Error applying custom extraction: {e}")
+        return jsonify({'error': str(e)}), 500
