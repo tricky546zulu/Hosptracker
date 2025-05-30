@@ -114,14 +114,47 @@ class HospitalDataScraper:
             # Check each hospital code
             for hospital_code in ['RUH', 'SPH', 'SCH', 'JPCH']:
                 if hospital_code in line and any(c.isdigit() for c in line):
-                    # Skip specialty department lines, but allow main hospital entries
-                    if any(specialty in line.upper() for specialty in ['CARDIOSCIENCES', 'ADDICTION']) and 'ED' in line.upper():
+                    # Skip specialty department lines - only capture main Emergency Department entries
+                    # For lines that contain both main ED data and specialty info, extract the main ED total
+                    if 'CARDIOSCIENCES' in line.upper() or 'MEDICINE ED' in line.upper():
                         logging.info(f"Skipping specialty department line: {line}")
                         continue
                     
-                    # For SCH, skip only if it's clearly a specialty line, not the main ED entry
-                    if hospital_code == 'SCH' and 'NEUROSCIENCES' in line.upper() and line.strip().endswith('3'):
-                        logging.info(f"Skipping SCH specialty department line: {line}")
+                    # For SPH and SCH lines with specialty info at the end, still extract main ED data
+                    if hospital_code == 'SPH' and 'ADDICTION SERVICES' in line.upper():
+                        # This line contains main SPH ED data followed by specialty info
+                        # Extract the Total column (4th number) which represents main ED total
+                        numbers = re.findall(r'\b\d+\b', line)
+                        if len(numbers) >= 4:
+                            total_patients = int(numbers[3])  # 4th number is the Total for main ED
+                            
+                            hospital_info = {
+                                'hospital_code': hospital_code,
+                                'hospital_name': self._get_full_hospital_name(hospital_code),
+                                'total_patients': total_patients
+                            }
+                            
+                            logging.info(f"Successfully extracted main ED data for {hospital_code}: {hospital_info}")
+                            hospital_data.append(hospital_info)
+                            break
+                        continue
+                    
+                    if hospital_code == 'SCH' and 'NEUROSCIENCES' in line.upper():
+                        # This line contains main SCH ED data followed by specialty info
+                        # Extract the Total column (4th number) which represents main ED total
+                        numbers = re.findall(r'\b\d+\b', line)
+                        if len(numbers) >= 4:
+                            total_patients = int(numbers[3])  # 4th number is the Total for main ED
+                            
+                            hospital_info = {
+                                'hospital_code': hospital_code,
+                                'hospital_name': self._get_full_hospital_name(hospital_code),
+                                'total_patients': total_patients
+                            }
+                            
+                            logging.info(f"Successfully extracted main ED data for {hospital_code}: {hospital_info}")
+                            hospital_data.append(hospital_info)
+                            break
                         continue
                     
                     # Extract numbers from this line
