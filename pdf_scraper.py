@@ -272,10 +272,10 @@ class HospitalDataScraper:
                 hospital_code = data['hospital_code']
                 patient_count = data['total_patients']
                 
-                # Hospital-specific validation ranges
+                # Hospital-specific validation ranges based on observed data
                 expected_ranges = {
                     'RUH': (20, 150),     # Large hospital
-                    'SPH': (10, 80),      # Medium hospital
+                    'SPH': (2, 25),       # Confirmed range by user
                     'SCH': (15, 70),      # Medium hospital
                     'JPCH': (5, 40)       # Children's hospital
                 }
