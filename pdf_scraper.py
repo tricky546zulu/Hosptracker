@@ -276,7 +276,7 @@ class HospitalDataScraper:
                 expected_ranges = {
                     'RUH': (20, 150),     # Large hospital
                     'SPH': (2, 25),       # Confirmed range by user
-                    'SCH': (15, 70),      # Medium hospital
+                    'SCH': (1, 70),       # Can be as low as 1 at times
                     'JPCH': (5, 40)       # Children's hospital
                 }
                 
