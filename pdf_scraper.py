@@ -74,15 +74,20 @@ class HospitalDataScraper:
             # Split into lines for processing
             lines = all_text.split('\n')
             
-            # Find Emergency Department section - look for broader patterns
+            # Find Emergency Department section
             ed_section_found = False
             for i, line in enumerate(lines):
-                # Look for Emergency Department table or similar patterns
-                if any(keyword in line.upper() for keyword in ['EMERGENCY', 'TOTAL', 'RUH', 'SPH', 'SCH', 'JPCH']):
-                    logging.info(f"Found potential Emergency Department data at line {i}: {line[:100]}")
+                # Look for the Emergency Department table header or data rows
+                if ('Site Admitted Active Consults Total' in line or 
+                    'Emergency Department' in line or
+                    (any(code in line for code in ['RUH', 'SPH', 'SCH', 'JPCH']) and 
+                     any(num.isdigit() for num in line.split()))):
                     
-                    # Parse Emergency Department data from broader context
-                    ed_data = self._parse_emergency_department_data(lines[max(0, i-5):i+20])
+                    logging.info(f"Found Emergency Department section at line {i}: {line}")
+                    
+                    # Parse Emergency Department data from the complete table section
+                    # Include more context to capture all hospital rows
+                    ed_data = self._parse_emergency_department_data(lines[max(0, i-2):i+20])
                     if ed_data:
                         hospital_data.extend(ed_data)
                         ed_section_found = True
@@ -106,9 +111,13 @@ class HospitalDataScraper:
         hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
         
         for hospital_code in hospitals:
+            logging.info(f"Processing {hospital_code} for Emergency Department data...")
             hospital_info = self._extract_numbers_from_line_context(text, 0, hospital_code)
             if hospital_info:
+                logging.info(f"Successfully extracted data for {hospital_code}: {hospital_info}")
                 hospital_data.append(hospital_info)
+            else:
+                logging.warning(f"No data extracted for {hospital_code}")
         
         return hospital_data
     
@@ -244,5 +253,7 @@ class HospitalDataScraper:
 
 def run_scraping():
     """Function to run scraping - called by scheduler"""
-    scraper = HospitalDataScraper()
-    return scraper.scrape_hospital_data()
+    from app import app
+    with app.app_context():
+        scraper = HospitalDataScraper()
+        return scraper.scrape_hospital_data()
