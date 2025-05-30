@@ -744,3 +744,65 @@ def apply_custom_extraction():
     except Exception as e:
         logging.error(f"Error applying custom extraction: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/oversight', methods=['GET'])
+def get_ai_oversight():
+    """Get AI oversight analysis"""
+    try:
+        from ai_monitor import run_ai_oversight
+        analysis = run_ai_oversight()
+        
+        if analysis:
+            return jsonify(analysis)
+        else:
+            return jsonify({'error': 'No analysis available'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/insights', methods=['GET'])
+def get_ai_insights():
+    """Get AI insights report"""
+    try:
+        from ai_monitor import AIMonitor
+        monitor = AIMonitor()
+        insights = monitor.generate_insights_report()
+        
+        return jsonify(insights)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/validate', methods=['POST'])
+def validate_data_manually():
+    """Manually validate current data using AI"""
+    try:
+        from ai_monitor import AIMonitor
+        
+        # Get current data
+        current_data = []
+        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
+        
+        for hospital_code in hospitals:
+            latest = HospitalCapacity.query.filter_by(
+                hospital_code=hospital_code
+            ).order_by(HospitalCapacity.timestamp.desc()).first()
+            
+            if latest:
+                current_data.append({
+                    'hospital_code': hospital_code,
+                    'hospital_name': latest.hospital_name,
+                    'total_patients': latest.total_patients,
+                    'timestamp': latest.timestamp.isoformat()
+                })
+        
+        if not current_data:
+            return jsonify({'error': 'No current data to validate'}), 404
+        
+        monitor = AIMonitor()
+        validation = monitor.validate_data_extraction(current_data)
+        
+        return jsonify(validation)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

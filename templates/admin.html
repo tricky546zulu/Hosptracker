@@ -223,6 +223,9 @@
                                 <a href="/debug" class="btn btn-outline-info">
                                     <i class="fas fa-search"></i> PDF Debug Tool
                                 </a>
+                                <button class="btn btn-outline-success" onclick="runAIOversight()">
+                                    <i class="fas fa-brain"></i> Run AI Analysis
+                                </button>
                                 <button class="btn btn-outline-warning" onclick="clearOldData()">
                                     <i class="fas fa-broom"></i> Clear Old Data
                                 </button>
@@ -422,6 +425,73 @@ async function clearOldData() {
             alert('Error clearing old data');
         }
     }
+}
+
+async function runAIOversight() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/ai/oversight');
+        const analysis = await response.json();
+        
+        if (response.ok) {
+            displayAIAnalysis(analysis);
+        } else {
+            document.getElementById('aiOversightInfo').innerHTML = 
+                `<div class="alert alert-danger">Error: ${analysis.error}</div>`;
+        }
+    } catch (error) {
+        console.error('Error running AI oversight:', error);
+        document.getElementById('aiOversightInfo').innerHTML = 
+            '<div class="alert alert-danger">Failed to connect to AI analysis service</div>';
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+function displayAIAnalysis(analysis) {
+    const container = document.getElementById('aiOversightInfo');
+    
+    let html = '<div class="ai-analysis-results">';
+    
+    if (analysis.overall_assessment) {
+        html += `<div class="alert alert-info mb-3">
+            <strong>Overall Assessment:</strong> ${analysis.overall_assessment}
+        </div>`;
+    }
+    
+    if (analysis.anomalies && analysis.anomalies.length > 0) {
+        html += '<div class="mb-3"><h6>Detected Anomalies:</h6><ul class="list-unstyled">';
+        analysis.anomalies.forEach(anomaly => {
+            html += `<li><span class="badge bg-warning me-2">${anomaly.type}</span> ${anomaly.description}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    if (analysis.trends && analysis.trends.length > 0) {
+        html += '<div class="mb-3"><h6>Data Trends:</h6><ul class="list-unstyled">';
+        analysis.trends.forEach(trend => {
+            html += `<li><span class="badge bg-info me-2">Trend</span> ${trend}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    if (analysis.recommendations && analysis.recommendations.length > 0) {
+        html += '<div class="mb-3"><h6>Recommendations:</h6><ul class="list-unstyled">';
+        analysis.recommendations.forEach(rec => {
+            html += `<li><span class="badge bg-success me-2">Rec</span> ${rec}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    html += `<small class="text-muted">Analysis completed at ${new Date().toLocaleString()}</small>`;
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
 </script>
 {% endblock %}
