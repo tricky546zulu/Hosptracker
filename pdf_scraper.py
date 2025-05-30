@@ -191,6 +191,9 @@ class HospitalDataScraper:
                         if total_patients is None or total_patients < 45:
                             logging.warning(f"RUH: No realistic patient count found in numbers {numbers}, skipping entirely")
                             return None
+                        
+                        # Additional safety check - log successful extraction for monitoring
+                        logging.info(f"RUH: Successfully extracted valid patient count: {total_patients}")
                             
                         return {
                             'hospital_code': hospital_code,
