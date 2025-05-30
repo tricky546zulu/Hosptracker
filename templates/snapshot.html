@@ -15,14 +15,20 @@
         }
         .hospital-card {
             transition: transform 0.2s;
+            min-height: 150px;
+            border: 1px solid #dee2e6;
         }
         .hospital-card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        .capacity-low { border-left: 4px solid #28a745; }
-        .capacity-moderate { border-left: 4px solid #ffc107; }
-        .capacity-high { border-left: 4px solid #fd7e14; }
-        .capacity-very_high { border-left: 4px solid #dc3545; }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .capacity-low { border-left: 4px solid #28a745; background-color: rgba(40, 167, 69, 0.1); }
+        .capacity-moderate { border-left: 4px solid #ffc107; background-color: rgba(255, 193, 7, 0.1); }
+        .capacity-high { border-left: 4px solid #fd7e14; background-color: rgba(253, 126, 20, 0.1); }
+        .capacity-very_high { border-left: 4px solid #dc3545; background-color: rgba(220, 53, 69, 0.1); }
         .share-section {
             background-color: #f8f9fa;
             border-radius: 8px;
@@ -63,8 +69,8 @@
                             <div class="text-end">
                                 <span class="badge 
                                     {% if hospital.capacity_level == 'low' %}bg-success
-                                    {% elif hospital.capacity_level == 'moderate' %}bg-warning
-                                    {% elif hospital.capacity_level == 'high' %}bg-orange
+                                    {% elif hospital.capacity_level == 'moderate' %}bg-warning text-dark
+                                    {% elif hospital.capacity_level == 'high' %}bg-warning text-dark
                                     {% else %}bg-danger{% endif %}">
                                     {{ hospital.capacity_level|title }}
                                 </span>
@@ -115,8 +121,8 @@
                     <button class="btn btn-primary" onclick="copySnapshotLink()">
                         <i class="fas fa-copy"></i> Copy Link
                     </button>
-                    <button class="btn btn-secondary ms-2" onclick="downloadSnapshot()">
-                        <i class="fas fa-download"></i> Download
+                    <button class="btn btn-secondary ms-2" onclick="downloadSnapshot()" id="downloadBtn">
+                        <i class="fas fa-download"></i> Download JSON
                     </button>
                 </div>
             </div>
@@ -152,14 +158,23 @@
         }
 
         function downloadSnapshot() {
-            const snapshotData = {{ snapshot|tojson }};
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(snapshotData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `hospital-snapshot-${snapshotData.id}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
+            try {
+                const snapshotData = {{ snapshot|tojson|safe }};
+                const blob = new Blob([JSON.stringify(snapshotData, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = window.URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.href = url;
+                downloadAnchor.download = `hospital-snapshot-${snapshotData.id}.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                document.body.removeChild(downloadAnchor);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Download failed:', error);
+                alert('Download failed. Please try again.');
+            }
         }
 
         // Add meta tags for social sharing
