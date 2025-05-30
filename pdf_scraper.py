@@ -88,8 +88,8 @@ class HospitalDataScraper:
                     break
             
             if not ed_section_found:
-                logging.warning("Emergency Department section not found in PDF")
-                return self._create_sample_ed_data()
+                logging.warning("Emergency Department section not found in PDF - no data will be saved")
+                return None
             
             return hospital_data
             
@@ -189,31 +189,7 @@ class HospitalDataScraper:
         }
         return names.get(code, code)
     
-    def _create_sample_ed_data(self):
-        """Create realistic sample Emergency Department data for testing"""
-        logging.info("Creating sample Emergency Department data")
-        return [
-            {
-                'hospital_code': 'RUH',
-                'hospital_name': 'Royal University Hospital',
-                'total_patients': 55
-            },
-            {
-                'hospital_code': 'SPH',
-                'hospital_name': 'St. Paul\'s Hospital',
-                'total_patients': 32
-            },
-            {
-                'hospital_code': 'SCH',
-                'hospital_name': 'Saskatoon City Hospital',
-                'total_patients': 18
-            },
-            {
-                'hospital_code': 'JPCH',
-                'hospital_name': 'Jim Pattison Children\'s Hospital',
-                'total_patients': 12
-            }
-        ]
+
     
     def _save_hospital_data(self, hospital_data):
         """Save hospital data to database"""
