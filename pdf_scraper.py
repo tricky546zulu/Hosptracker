@@ -200,36 +200,63 @@ class HospitalDataScraper:
                             'hospital_name': self._get_full_hospital_name(hospital_code),
                             'total_patients': total_patients
                         }
-                    elif hospital_code == 'SCH':
-                        # For SCH, sum Active + Consults for true Emergency Department total
-                        # PDF format: Admitted | Active | Consults | Total
-                        if len(numbers) >= 4:
-                            active = int(numbers[-3])  # Active patients
-                            consults = int(numbers[-2])  # Consults
-                            total_patients = active + consults  # True ED total
-                        else:
-                            total_patients = int(numbers[-1])
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'total_patients': total_patients
-                        }
-                    elif hospital_code == 'JPCH':
-                        # For JPCH, use the last number as Total
-                        total_patients = int(numbers[-1])
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'total_patients': total_patients
-                        }
                     else:
-                        # Default case for any other hospital
+                        # For RUH, let's examine more context around the hospital name
+                        logging.info(f"RUH: Searching extended context for realistic patient count")
+                        
+                        # Look at 3 lines before and after the hospital mention
+                        context_start = max(0, line_index - 3)
+                        context_end = min(len(lines), line_index + 4)
+                        context_lines = lines[context_start:context_end]
+                        
+                        for context_line in context_lines:
+                            context_numbers = re.findall(r'\b\d+\b', context_line)
+                            for num_str in context_numbers:
+                                try:
+                                    candidate = int(num_str)
+                                    if 45 <= candidate <= 200:
+                                        logging.info(f"RUH: Found realistic count {candidate} in extended context: '{context_line.strip()}'")
+                                        return {
+                                            'hospital_code': hospital_code,
+                                            'hospital_name': self._get_full_hospital_name(hospital_code),
+                                            'total_patients': candidate
+                                        }
+                                except ValueError:
+                                    continue
+                        
+                        logging.warning(f"RUH: No realistic patient count found even in extended context")
+                        return None
+                
+                elif hospital_code == 'SCH':
+                    # For SCH, sum Active + Consults for true Emergency Department total
+                    # PDF format: Admitted | Active | Consults | Total
+                    if len(numbers) >= 4:
+                        active = int(numbers[-3])  # Active patients
+                        consults = int(numbers[-2])  # Consults
+                        total_patients = active + consults  # True ED total
+                    else:
                         total_patients = int(numbers[-1])
-                        return {
-                            'hospital_code': hospital_code,
-                            'hospital_name': self._get_full_hospital_name(hospital_code),
-                            'total_patients': total_patients
-                        }
+                    return {
+                        'hospital_code': hospital_code,
+                        'hospital_name': self._get_full_hospital_name(hospital_code),
+                        'total_patients': total_patients
+                    }
+                elif hospital_code == 'JPCH':
+                    # For JPCH, use the last number as Total
+                    total_patients = int(numbers[-1])
+                    return {
+                        'hospital_code': hospital_code,
+                        'hospital_name': self._get_full_hospital_name(hospital_code),
+                        'total_patients': total_patients
+                    }
+                else:
+                    # Default case for any other hospital
+                    total_patients = int(numbers[-1])
+                    return {
+                        'hospital_code': hospital_code,
+                        'hospital_name': self._get_full_hospital_name(hospital_code),
+                        'total_patients': total_patients
+                    }
                 
                 # Fallback: match specific known patterns from the screenshot
                 elif len(numbers) >= 3:
