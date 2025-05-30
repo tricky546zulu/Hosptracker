@@ -117,20 +117,23 @@ class HospitalDataScraper:
         
         for i, line in enumerate(lines):
             if hospital_code in line:
+                # Skip specialty department lines (like "RUH Cardiosciences ED")
+                # Focus on main Emergency Department entries
+                if any(specialty in line.upper() for specialty in ['CARDIOSCIENCES', 'NEUROSCIENCES', 'ADDICTION']):
+                    logging.info(f"Skipping specialty department line for {hospital_code}: {line}")
+                    continue
+                
                 # Extract all numbers from this line
                 numbers = re.findall(r'\b\d+\b', line)
                 
                 if numbers:
                     # Convert to integers
                     numbers = [int(n) for n in numbers]
+                    logging.info(f"{hospital_code}: Found numbers {numbers} in line: {line}")
                     
                     if hospital_code == 'RUH':
-                        # RUH validation - must have realistic ED volume  
-                        total_patients = None
-                        for candidate in numbers:
-                            if 20 <= candidate <= 200:
-                                total_patients = candidate
-                                break
+                        # For RUH, use the last number as Emergency Department Total
+                        total_patients = numbers[-1] if numbers else None
                         
                         # Validation - RUH Emergency Department should have reasonable volume
                         if total_patients is None or total_patients < 20 or total_patients > 200:
