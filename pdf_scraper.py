@@ -32,15 +32,21 @@ class HospitalDataScraper:
                 self._log_scraping_result("error", "No hospital data found in PDF")
                 return False
             
+            # AI-powered data validation and cleanup
+            validated_data = self._ai_validate_and_clean_data(hospital_data)
+            
             # Save to database
-            saved_count = self._save_hospital_data(hospital_data)
+            saved_count = self._save_hospital_data(validated_data)
             
             if saved_count > 0:
-                self._log_scraping_result("success", f"Successfully scraped data for {saved_count} hospitals")
-                logging.info(f"Successfully scraped hospital data for {len(hospital_data)} hospitals")
+                self._log_scraping_result("success", f"Successfully scraped and validated data for {saved_count} hospitals")
+                logging.info(f"Successfully scraped hospital data for {len(validated_data)} hospitals")
+                
+                # Clean up existing anomalous data
+                self._clean_existing_anomalous_data()
                 return True
             else:
-                self._log_scraping_result("error", "No new data was saved")
+                self._log_scraping_result("error", "No valid data passed AI validation")
                 return False
                 
         except Exception as e:
@@ -246,6 +252,119 @@ class HospitalDataScraper:
             'JPCH': 'Jim Pattison Children\'s Hospital'
         }
         return names.get(code, code)
+    
+    def _ai_validate_and_clean_data(self, hospital_data):
+        """AI-powered validation and cleaning of scraped data"""
+        try:
+            from ai_monitor import validate_extracted_data
+            
+            # Validate data using AI
+            is_valid = validate_extracted_data(hospital_data)
+            
+            if not is_valid:
+                logging.warning("AI validation failed for scraped data")
+                return []
+            
+            # Apply consistency rules and remove obvious anomalies
+            validated_data = []
+            
+            for data in hospital_data:
+                hospital_code = data['hospital_code']
+                patient_count = data['total_patients']
+                
+                # Hospital-specific validation ranges
+                expected_ranges = {
+                    'RUH': (20, 150),     # Large hospital
+                    'SPH': (10, 80),      # Medium hospital
+                    'SCH': (15, 70),      # Medium hospital
+                    'JPCH': (5, 40)       # Children's hospital
+                }
+                
+                min_expected, max_expected = expected_ranges.get(hospital_code, (5, 200))
+                
+                # Check if value is within reasonable range
+                if min_expected <= patient_count <= max_expected:
+                    validated_data.append(data)
+                    logging.info(f"AI validation passed for {hospital_code}: {patient_count} patients")
+                else:
+                    logging.warning(f"AI validation failed for {hospital_code}: {patient_count} patients outside expected range ({min_expected}-{max_expected})")
+            
+            return validated_data
+            
+        except Exception as e:
+            logging.error(f"Error in AI validation: {e}")
+            # Return original data if AI validation fails
+            return hospital_data
+    
+    def _clean_existing_anomalous_data(self):
+        """Clean up existing anomalous data in the database"""
+        try:
+            from app import db
+            from models import HospitalCapacity
+            from datetime import datetime, timedelta
+            import pytz
+            
+            # Define Saskatchewan timezone
+            sask_tz = pytz.timezone('America/Regina')
+            utc_now = datetime.utcnow()
+            
+            # Look at data from the last 24 hours
+            cutoff_time = utc_now - timedelta(hours=24)
+            
+            # Hospital-specific anomaly detection ranges
+            anomaly_thresholds = {
+                'RUH': {'min': 15, 'max': 200},
+                'SPH': {'min': 8, 'max': 100},
+                'SCH': {'min': 12, 'max': 80},
+                'JPCH': {'min': 3, 'max': 50}
+            }
+            
+            removed_count = 0
+            
+            for hospital_code, thresholds in anomaly_thresholds.items():
+                # Find anomalous records
+                anomalous_records = HospitalCapacity.query.filter(
+                    HospitalCapacity.hospital_code == hospital_code,
+                    HospitalCapacity.timestamp >= cutoff_time,
+                    db.or_(
+                        HospitalCapacity.total_patients < thresholds['min'],
+                        HospitalCapacity.total_patients > thresholds['max']
+                    )
+                ).all()
+                
+                for record in anomalous_records:
+                    logging.info(f"Removing anomalous data: {hospital_code} had {record.total_patients} patients at {record.timestamp}")
+                    db.session.delete(record)
+                    removed_count += 1
+            
+            # Also detect sudden jumps/drops in recent data
+            for hospital_code in ['RUH', 'SPH', 'SCH', 'JPCH']:
+                recent_records = HospitalCapacity.query.filter(
+                    HospitalCapacity.hospital_code == hospital_code,
+                    HospitalCapacity.timestamp >= cutoff_time
+                ).order_by(HospitalCapacity.timestamp.desc()).limit(10).all()
+                
+                if len(recent_records) >= 2:
+                    for i in range(len(recent_records) - 1):
+                        current = recent_records[i].total_patients
+                        previous = recent_records[i + 1].total_patients
+                        
+                        if previous > 0:  # Avoid division by zero
+                            change_percent = abs(current - previous) / previous
+                            
+                            # Remove records with >60% sudden changes
+                            if change_percent > 0.6:
+                                logging.info(f"Removing sudden change anomaly: {hospital_code} jumped from {previous} to {current} patients ({change_percent:.1%} change)")
+                                db.session.delete(recent_records[i])
+                                removed_count += 1
+            
+            if removed_count > 0:
+                db.session.commit()
+                logging.info(f"AI cleanup removed {removed_count} anomalous data points")
+            
+        except Exception as e:
+            logging.error(f"Error cleaning anomalous data: {e}")
+            db.session.rollback()
     
 
     
