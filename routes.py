@@ -806,3 +806,164 @@ def validate_data_manually():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/data/anomalies', methods=['GET'])
+def detect_data_anomalies():
+    """Detect data anomalies like dramatic drops or values out of normal range"""
+    try:
+        from datetime import timedelta
+        
+        anomalies = []
+        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
+        
+        # Define expected ranges for each hospital based on historical patterns
+        expected_ranges = {
+            'RUH': {'min': 35, 'max': 80},  # Royal University Hospital
+            'SPH': {'min': 20, 'max': 50},  # St. Paul's Hospital
+            'SCH': {'min': 15, 'max': 40},  # Saskatoon City Hospital
+            'JPCH': {'min': 5, 'max': 25}   # Jim Pattison Children's Hospital
+        }
+        
+        for hospital_code in hospitals:
+            # Get recent data for this hospital (last 24 hours)
+            recent_data = HospitalCapacity.query.filter(
+                HospitalCapacity.hospital_code == hospital_code,
+                HospitalCapacity.timestamp >= datetime.utcnow() - timedelta(hours=24)
+            ).order_by(HospitalCapacity.timestamp.desc()).limit(50).all()
+            
+            if len(recent_data) < 2:
+                continue
+                
+            hospital_range = expected_ranges.get(hospital_code, {'min': 0, 'max': 100})
+            
+            for i, record in enumerate(recent_data[:-1]):
+                if record.total_patients is None:
+                    continue
+                    
+                # Check for out-of-range values
+                if (record.total_patients < hospital_range['min'] or 
+                    record.total_patients > hospital_range['max']):
+                    anomalies.append({
+                        'id': record.id,
+                        'type': 'out_of_range',
+                        'hospital': hospital_code,
+                        'value': record.total_patients,
+                        'timestamp': record.timestamp.isoformat(),
+                        'expected_range': f"{hospital_range['min']}-{hospital_range['max']}",
+                        'severity': 'high' if (record.total_patients < hospital_range['min'] * 0.5 or 
+                                             record.total_patients > hospital_range['max'] * 1.5) else 'medium'
+                    })
+                
+                # Check for dramatic drops (>50% decrease)
+                next_record = recent_data[i + 1]
+                if next_record.total_patients is not None:
+                    percentage_change = abs(record.total_patients - next_record.total_patients) / max(next_record.total_patients, 1) * 100
+                    
+                    if percentage_change > 50 and record.total_patients < next_record.total_patients * 0.5:
+                        anomalies.append({
+                            'id': record.id,
+                            'type': 'dramatic_drop',
+                            'hospital': hospital_code,
+                            'value': record.total_patients,
+                            'previous_value': next_record.total_patients,
+                            'percentage_drop': round(percentage_change, 1),
+                            'timestamp': record.timestamp.isoformat(),
+                            'severity': 'high'
+                        })
+        
+        return jsonify({
+            'anomalies': anomalies,
+            'total_count': len(anomalies),
+            'scan_timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/data/anomalies/<int:record_id>', methods=['DELETE'])
+def remove_anomaly(record_id):
+    """Remove a specific data point identified as anomalous"""
+    try:
+        record = HospitalCapacity.query.get_or_404(record_id)
+        hospital_code = record.hospital_code
+        timestamp = record.timestamp
+        
+        db.session.delete(record)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed anomalous data point for {hospital_code} at {timestamp}'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/data/correct-range', methods=['POST'])
+def correct_time_range():
+    """Correct or remove data points in a specific time range"""
+    try:
+        data = request.get_json()
+        hospital_code = data.get('hospital_code')
+        start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
+        action = data.get('action', 'delete')  # 'delete' or 'interpolate'
+        
+        # Find records in the time range
+        records_to_correct = HospitalCapacity.query.filter(
+            HospitalCapacity.hospital_code == hospital_code,
+            HospitalCapacity.timestamp >= start_time,
+            HospitalCapacity.timestamp <= end_time
+        ).all()
+        
+        if action == 'delete':
+            for record in records_to_correct:
+                db.session.delete(record)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Deleted {len(records_to_correct)} records for {hospital_code} between {start_time} and {end_time}',
+                'deleted_count': len(records_to_correct)
+            })
+            
+        elif action == 'interpolate':
+            # Get the values before and after the time range for interpolation
+            before_record = HospitalCapacity.query.filter(
+                HospitalCapacity.hospital_code == hospital_code,
+                HospitalCapacity.timestamp < start_time
+            ).order_by(HospitalCapacity.timestamp.desc()).first()
+            
+            after_record = HospitalCapacity.query.filter(
+                HospitalCapacity.hospital_code == hospital_code,
+                HospitalCapacity.timestamp > end_time
+            ).order_by(HospitalCapacity.timestamp.asc()).first()
+            
+            if before_record and after_record and len(records_to_correct) > 0:
+                # Linear interpolation
+                start_value = before_record.total_patients
+                end_value = after_record.total_patients
+                
+                for i, record in enumerate(records_to_correct):
+                    progress = i / (len(records_to_correct) - 1) if len(records_to_correct) > 1 else 0
+                    interpolated_value = int(start_value + (end_value - start_value) * progress)
+                    record.total_patients = interpolated_value
+                
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Interpolated {len(records_to_correct)} records for {hospital_code}',
+                    'interpolated_count': len(records_to_correct)
+                })
+            else:
+                return jsonify({'error': 'Cannot interpolate: missing boundary values'}), 400
+        
+        else:
+            return jsonify({'error': 'Invalid action. Use "delete" or "interpolate"'}), 400
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

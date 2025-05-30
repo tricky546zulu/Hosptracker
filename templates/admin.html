@@ -226,6 +226,9 @@
                                 <button class="btn btn-outline-success" onclick="runAIOversight()">
                                     <i class="fas fa-brain"></i> Run AI Analysis
                                 </button>
+                                <button class="btn btn-outline-warning" onclick="scanDataAnomalies()">
+                                    <i class="fas fa-exclamation-triangle"></i> Scan for Anomalies
+                                </button>
                                 <button class="btn btn-outline-warning" onclick="clearOldData()">
                                     <i class="fas fa-broom"></i> Clear Old Data
                                 </button>
@@ -492,6 +495,208 @@ function displayAIAnalysis(analysis) {
     html += '</div>';
     
     container.innerHTML = html;
+}
+
+async function scanDataAnomalies() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/data/anomalies');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayAnomalies(data);
+        } else {
+            alert(`Error scanning for anomalies: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error scanning for anomalies:', error);
+        alert('Failed to scan for data anomalies');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+function displayAnomalies(data) {
+    if (data.total_count === 0) {
+        alert('No data anomalies detected in the last 24 hours.');
+        return;
+    }
+    
+    let html = `<div class="modal fade" id="anomaliesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Data Anomalies Detected (${data.total_count})</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Type</th>
+                                    <th>Value</th>
+                                    <th>Time</th>
+                                    <th>Severity</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+    
+    data.anomalies.forEach(anomaly => {
+        const severityClass = anomaly.severity === 'high' ? 'text-danger' : 'text-warning';
+        const typeDisplay = anomaly.type === 'out_of_range' ? 'Out of Range' : 'Dramatic Drop';
+        
+        let details = '';
+        if (anomaly.type === 'out_of_range') {
+            details = `Expected: ${anomaly.expected_range}`;
+        } else if (anomaly.type === 'dramatic_drop') {
+            details = `From ${anomaly.previous_value} (${anomaly.percentage_drop}% drop)`;
+        }
+        
+        html += `
+            <tr>
+                <td>${anomaly.hospital}</td>
+                <td>${typeDisplay}</td>
+                <td>
+                    <strong>${anomaly.value}</strong>
+                    <br><small class="text-muted">${details}</small>
+                </td>
+                <td>${new Date(anomaly.timestamp).toLocaleString()}</td>
+                <td><span class="${severityClass}">${anomaly.severity}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="removeAnomaly(${anomaly.id})">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Bulk Actions</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select class="form-select" id="bulkHospital">
+                                    <option value="">Select Hospital</option>
+                                    <option value="RUH">RUH</option>
+                                    <option value="SPH">SPH</option>
+                                    <option value="SCH">SCH</option>
+                                    <option value="JPCH">JPCH</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="datetime-local" class="form-control" id="startTime" placeholder="Start Time">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="datetime-local" class="form-control" id="endTime" placeholder="End Time">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-warning" onclick="correctTimeRange('delete')">Delete Range</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted">Scanned at ${new Date(data.scan_timestamp).toLocaleString()}</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('anomaliesModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', html);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('anomaliesModal'));
+    modal.show();
+}
+
+async function removeAnomaly(recordId) {
+    if (!confirm('Are you sure you want to remove this data point?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/data/anomalies/${recordId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+            // Refresh the anomalies scan
+            scanDataAnomalies();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error removing anomaly:', error);
+        alert('Failed to remove anomaly');
+    }
+}
+
+async function correctTimeRange(action) {
+    const hospital = document.getElementById('bulkHospital').value;
+    const startTime = document.getElementById('startTime').value;
+    const endTime = document.getElementById('endTime').value;
+    
+    if (!hospital || !startTime || !endTime) {
+        alert('Please select hospital and time range');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to ${action} data points for ${hospital} between ${startTime} and ${endTime}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/data/correct-range', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hospital_code: hospital,
+                start_time: new Date(startTime).toISOString(),
+                end_time: new Date(endTime).toISOString(),
+                action: action
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+            // Clear the form
+            document.getElementById('bulkHospital').value = '';
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error correcting time range:', error);
+        alert('Failed to correct time range');
+    }
 }
 </script>
 {% endblock %}
