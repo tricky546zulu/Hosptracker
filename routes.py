@@ -967,3 +967,73 @@ def correct_time_range():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/timezone/validate', methods=['GET'])
+def validate_timezone_consistency():
+    """Validate and correct timezone consistency for Saskatchewan local time"""
+    try:
+        import pytz
+        
+        # Saskatchewan timezone (CST - UTC-6, no DST)
+        saskatchewan_tz = pytz.timezone('America/Regina')
+        utc_tz = pytz.UTC
+        
+        # Get recent data to check timezone consistency
+        recent_data = HospitalCapacity.query.filter(
+            HospitalCapacity.timestamp >= datetime.utcnow() - timedelta(hours=24)
+        ).order_by(HospitalCapacity.timestamp.desc()).limit(100).all()
+        
+        timezone_issues = []
+        
+        for record in recent_data:
+            # Check if timestamp appears to be in wrong timezone
+            utc_time = record.timestamp.replace(tzinfo=utc_tz)
+            sask_time = utc_time.astimezone(saskatchewan_tz)
+            
+            # Check for common timezone issues
+            current_hour_sask = sask_time.hour
+            
+            # Flag suspicious timestamps (like midnight scrapes when they should be daytime)
+            if current_hour_sask < 6 or current_hour_sask > 23:
+                timezone_issues.append({
+                    'id': record.id,
+                    'hospital': record.hospital_code,
+                    'utc_time': record.timestamp.isoformat(),
+                    'saskatchewan_time': sask_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
+                    'issue': f'Unusual hour: {current_hour_sask}:00 Saskatchewan time'
+                })
+        
+        return jsonify({
+            'saskatchewan_timezone': 'America/Regina (CST, UTC-6)',
+            'total_records_checked': len(recent_data),
+            'timezone_issues': timezone_issues,
+            'issues_count': len(timezone_issues),
+            'status': 'valid' if len(timezone_issues) == 0 else 'issues_detected'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/timezone/current', methods=['GET'])
+def get_current_saskatchewan_time():
+    """Get current Saskatchewan time and timezone info"""
+    try:
+        import pytz
+        
+        # Saskatchewan timezone (CST - UTC-6, no DST)
+        saskatchewan_tz = pytz.timezone('America/Regina')
+        utc_now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+        sask_now = utc_now.astimezone(saskatchewan_tz)
+        
+        return jsonify({
+            'current_utc': utc_now.isoformat(),
+            'current_saskatchewan': sask_now.isoformat(),
+            'timezone_name': 'America/Regina',
+            'timezone_abbreviation': 'CST',
+            'utc_offset': '-06:00',
+            'dst_active': False,  # Saskatchewan doesn't observe DST
+            'formatted_time': sask_now.strftime('%Y-%m-%d %H:%M:%S %Z')
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

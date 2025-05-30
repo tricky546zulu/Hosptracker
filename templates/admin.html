@@ -229,6 +229,9 @@
                                 <button class="btn btn-outline-warning" onclick="scanDataAnomalies()">
                                     <i class="fas fa-exclamation-triangle"></i> Scan for Anomalies
                                 </button>
+                                <button class="btn btn-outline-info" onclick="validateTimezone()">
+                                    <i class="fas fa-clock"></i> Check Saskatchewan Time
+                                </button>
                                 <button class="btn btn-outline-warning" onclick="clearOldData()">
                                     <i class="fas fa-broom"></i> Clear Old Data
                                 </button>
@@ -697,6 +700,126 @@ async function correctTimeRange(action) {
         console.error('Error correcting time range:', error);
         alert('Failed to correct time range');
     }
+}
+
+async function validateTimezone() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+    button.disabled = true;
+    
+    try {
+        // Get current Saskatchewan time
+        const currentResponse = await fetch('/api/timezone/current');
+        const currentTime = await currentResponse.json();
+        
+        // Validate timezone consistency
+        const validateResponse = await fetch('/api/timezone/validate');
+        const validation = await validateResponse.json();
+        
+        if (currentResponse.ok && validateResponse.ok) {
+            displayTimezoneInfo(currentTime, validation);
+        } else {
+            alert('Error checking timezone information');
+        }
+    } catch (error) {
+        console.error('Error validating timezone:', error);
+        alert('Failed to validate timezone');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+function displayTimezoneInfo(currentTime, validation) {
+    let html = `<div class="modal fade" id="timezoneModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Saskatchewan Time Validation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Current Time Information</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p><strong>Saskatchewan:</strong> ${currentTime.formatted_time}</p>
+                                    <p><strong>UTC:</strong> ${new Date(currentTime.current_utc).toLocaleString()}</p>
+                                    <p><strong>Timezone:</strong> ${currentTime.timezone_name}</p>
+                                    <p><strong>Offset:</strong> ${currentTime.utc_offset}</p>
+                                    <p><strong>DST Active:</strong> ${currentTime.dst_active ? 'Yes' : 'No'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Data Validation Status</h6>
+                            <div class="card ${validation.status === 'valid' ? 'bg-success' : 'bg-warning'} text-white">
+                                <div class="card-body">
+                                    <p><strong>Status:</strong> ${validation.status === 'valid' ? 'All Good' : 'Issues Found'}</p>
+                                    <p><strong>Records Checked:</strong> ${validation.total_records_checked}</p>
+                                    <p><strong>Issues Found:</strong> ${validation.issues_count}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+    
+    if (validation.issues_count > 0) {
+        html += `<div class="mt-3">
+            <h6>Timezone Issues Detected</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Hospital</th>
+                            <th>UTC Time</th>
+                            <th>Saskatchewan Time</th>
+                            <th>Issue</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        validation.timezone_issues.forEach(issue => {
+            html += `
+                <tr>
+                    <td>${issue.hospital}</td>
+                    <td>${new Date(issue.utc_time).toLocaleString()}</td>
+                    <td>${issue.saskatchewan_time}</td>
+                    <td><span class="text-warning">${issue.issue}</span></td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table></div></div>`;
+    } else {
+        html += `<div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> All timestamps are consistent with Saskatchewan local time.
+        </div>`;
+    }
+    
+    html += `
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted">Timezone: ${validation.saskatchewan_timezone}</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('timezoneModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', html);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('timezoneModal'));
+    modal.show();
 }
 </script>
 {% endblock %}
