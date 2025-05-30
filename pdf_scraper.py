@@ -171,16 +171,19 @@ class HospitalDataScraper:
                         # For RUH, use the last number as Total but validate it's reasonable
                         # RUH typically has 55+ patients in Emergency Department (often 60-90)
                         total_patients = int(numbers[-1])
-                        # If the number seems too low, try other numbers in the line
-                        if total_patients < 40:
-                            if len(numbers) >= 2:
-                                alt_total = int(numbers[-2])
-                                if alt_total >= 40:
-                                    total_patients = alt_total
                         
-                        # Final validation - RUH is a major hospital, should have substantial ED volume
-                        if total_patients < 15 or total_patients > 200:
-                            logging.warning(f"RUH total_patients {total_patients} seems unreasonable, skipping")
+                        # If the number seems too low, try other numbers in the line
+                        if total_patients < 50:
+                            # Try all numbers in descending order to find a realistic value
+                            for num in reversed(numbers):
+                                candidate = int(num)
+                                if 50 <= candidate <= 150:
+                                    total_patients = candidate
+                                    break
+                        
+                        # Strong validation - RUH is a major hospital, must have substantial ED volume
+                        if total_patients < 45 or total_patients > 200:
+                            logging.warning(f"RUH total_patients {total_patients} seems unreasonable for major hospital, skipping")
                             return None
                             
                         return {
