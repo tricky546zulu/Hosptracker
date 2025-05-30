@@ -65,8 +65,7 @@ class HospitalDataScraper:
         try:
             hospital_data = []
             
-            import io
-            with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+            with pdfplumber.open(pdf_content) as pdf:
                 all_text = ""
                 for page in pdf.pages:
                     all_text += page.extract_text() + "\n"
