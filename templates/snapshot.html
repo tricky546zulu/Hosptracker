@@ -17,6 +17,8 @@
             transition: transform 0.2s;
             min-height: 150px;
             border: 1px solid #dee2e6;
+            margin-bottom: 1rem;
+            background-color: #ffffff;
         }
         .hospital-card:hover {
             transform: translateY(-2px);
@@ -24,11 +26,31 @@
         }
         .card-body {
             padding: 1.5rem;
+            background-color: inherit;
         }
-        .capacity-low { border-left: 4px solid #28a745; background-color: rgba(40, 167, 69, 0.1); }
-        .capacity-moderate { border-left: 4px solid #ffc107; background-color: rgba(255, 193, 7, 0.1); }
-        .capacity-high { border-left: 4px solid #fd7e14; background-color: rgba(253, 126, 20, 0.1); }
-        .capacity-very_high { border-left: 4px solid #dc3545; background-color: rgba(220, 53, 69, 0.1); }
+        .share-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid #e9ecef;
+        }
+        .capacity-low { 
+            border-left: 4px solid #28a745; 
+            background-color: #f8fff9;
+        }
+        .capacity-moderate { 
+            border-left: 4px solid #ffc107; 
+            background-color: #fffcf0;
+        }
+        .capacity-high { 
+            border-left: 4px solid #fd7e14; 
+            background-color: #fff4f0;
+        }
+        .capacity-very_high { 
+            border-left: 4px solid #dc3545; 
+            background-color: #fff0f0;
+        }
         .share-section {
             background-color: #f8f9fa;
             border-radius: 8px;
@@ -72,7 +94,11 @@
                                     {% elif hospital.capacity_level == 'moderate' %}bg-warning text-dark
                                     {% elif hospital.capacity_level == 'high' %}bg-warning text-dark
                                     {% else %}bg-danger{% endif %}">
-                                    {{ hospital.capacity_level|title }}
+                                    {% if hospital.capacity_level == 'low' %}Normal
+                                    {% elif hospital.capacity_level == 'moderate' %}Busy
+                                    {% elif hospital.capacity_level == 'high' %}Very Busy
+                                    {% elif hospital.capacity_level == 'very_high' %}Extremely Busy
+                                    {% else %}{{ hospital.capacity_level|title }}{% endif %}
                                 </span>
                             </div>
                         </div>
@@ -89,16 +115,16 @@
                                     <div class="capacity-indicator">
                                         {% if hospital.capacity_level == 'low' %}
                                             <i class="fas fa-circle text-success fa-2x"></i>
-                                            <div class="small mt-1">Normal</div>
+                                            <div class="small mt-1 text-success">Normal</div>
                                         {% elif hospital.capacity_level == 'moderate' %}
                                             <i class="fas fa-circle text-warning fa-2x"></i>
-                                            <div class="small mt-1">Busy</div>
+                                            <div class="small mt-1 text-warning">Busy</div>
                                         {% elif hospital.capacity_level == 'high' %}
-                                            <i class="fas fa-circle text-orange fa-2x"></i>
-                                            <div class="small mt-1">Very Busy</div>
+                                            <i class="fas fa-circle text-warning fa-2x"></i>
+                                            <div class="small mt-1 text-warning">Very Busy</div>
                                         {% else %}
                                             <i class="fas fa-circle text-danger fa-2x"></i>
-                                            <div class="small mt-1">Extremely Busy</div>
+                                            <div class="small mt-1 text-danger">Extremely Busy</div>
                                         {% endif %}
                                     </div>
                                 </div>
