@@ -388,3 +388,186 @@ def get_error_reports():
     except Exception as e:
         logging.error(f"Error fetching reports: {str(e)}")
         return jsonify({'error': 'Failed to fetch error reports'}), 500
+
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard page"""
+    return render_template('admin.html')
+
+@app.route('/api/admin/scraping-logs')
+def get_scraping_logs():
+    """Get recent scraping logs for admin dashboard"""
+    try:
+        logs = ScrapingLog.query.order_by(ScrapingLog.timestamp.desc()).limit(50).all()
+        return jsonify([{
+            'id': log.id,
+            'timestamp': log.timestamp.isoformat(),
+            'status': log.status,
+            'message': log.message,
+            'pdf_url': log.pdf_url or ''
+        } for log in logs])
+    except Exception as e:
+        logging.error(f"Error fetching scraping logs: {e}")
+        return jsonify({'error': 'Failed to fetch scraping logs'}), 500
+
+@app.route('/api/admin/stats')
+def get_admin_stats():
+    """Get system statistics for admin dashboard"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Get latest data timestamp
+        latest_data = HospitalCapacity.query.order_by(HospitalCapacity.timestamp.desc()).first()
+        last_update = latest_data.timestamp.strftime('%Y-%m-%d %H:%M') if latest_data else 'Never'
+        
+        # Count active data sources (hospitals with recent data)
+        recent_threshold = datetime.utcnow() - timedelta(hours=6)
+        active_hospitals = db.session.query(HospitalCapacity.hospital_code).filter(
+            HospitalCapacity.timestamp >= recent_threshold
+        ).distinct().count()
+        
+        # Count validation blocks (RUH rejections in logs)
+        validation_blocks = ScrapingLog.query.filter(
+            ScrapingLog.timestamp >= datetime.utcnow() - timedelta(hours=24),
+            ScrapingLog.message.contains('RUH: No realistic patient count')
+        ).count()
+        
+        # Calculate success rate
+        total_attempts = ScrapingLog.query.filter(
+            ScrapingLog.timestamp >= datetime.utcnow() - timedelta(hours=24)
+        ).count()
+        
+        successful_attempts = ScrapingLog.query.filter(
+            ScrapingLog.timestamp >= datetime.utcnow() - timedelta(hours=24),
+            ScrapingLog.status == 'success'
+        ).count()
+        
+        success_rate = round((successful_attempts / total_attempts * 100) if total_attempts > 0 else 100, 1)
+        
+        # Determine system status
+        system_status = 'Active' if latest_data and latest_data.timestamp >= recent_threshold else 'Warning'
+        
+        return jsonify({
+            'system_status': system_status,
+            'active_sources': active_hospitals,
+            'validation_blocks': validation_blocks,
+            'success_rate': success_rate,
+            'last_update': last_update
+        })
+    except Exception as e:
+        logging.error(f"Error fetching admin stats: {e}")
+        return jsonify({'error': 'Failed to fetch statistics'}), 500
+
+@app.route('/api/admin/data-quality')
+def get_data_quality():
+    """Get data quality information for each hospital"""
+    try:
+        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
+        hospital_names = {
+            'RUH': 'Royal University Hospital',
+            'SPH': 'St. Paul\'s Hospital', 
+            'SCH': 'Saskatoon City Hospital',
+            'JPCH': 'Jim Pattison Children\'s Hospital'
+        }
+        
+        quality_data = []
+        for code in hospitals:
+            latest = HospitalCapacity.query.filter_by(hospital_code=code).order_by(
+                HospitalCapacity.timestamp.desc()
+            ).first()
+            
+            if latest:
+                # Determine data quality based on recency and validation
+                hours_old = (datetime.utcnow() - latest.timestamp).total_seconds() / 3600
+                
+                if hours_old < 2:
+                    quality = 'Good'
+                elif hours_old < 6:
+                    quality = 'Warning'
+                else:
+                    quality = 'Stale'
+                
+                # Special validation check for RUH
+                if code == 'RUH' and latest.total_patients < 45:
+                    quality = 'Invalid'
+                
+                quality_data.append({
+                    'code': code,
+                    'name': hospital_names[code],
+                    'last_reading': latest.timestamp.strftime('%H:%M'),
+                    'patient_count': latest.total_patients,
+                    'quality': quality
+                })
+            else:
+                quality_data.append({
+                    'code': code,
+                    'name': hospital_names[code],
+                    'last_reading': 'No data',
+                    'patient_count': 'N/A',
+                    'quality': 'No Data'
+                })
+        
+        return jsonify({'hospitals': quality_data})
+    except Exception as e:
+        logging.error(f"Error fetching data quality: {e}")
+        return jsonify({'error': 'Failed to fetch data quality'}), 500
+
+@app.route('/api/admin/error-reports/<int:report_id>', methods=['PATCH'])
+def update_error_report_status(report_id):
+    """Update error report status"""
+    try:
+        report = ErrorReport.query.get_or_404(report_id)
+        data = request.get_json()
+        
+        if 'status' in data:
+            report.status = data['status']
+            db.session.commit()
+            return jsonify({'success': True})
+        
+        return jsonify({'error': 'No status provided'}), 400
+    except Exception as e:
+        logging.error(f"Error updating error report: {e}")
+        return jsonify({'error': 'Failed to update error report'}), 500
+
+@app.route('/api/admin/trigger-scrape', methods=['POST'])
+def trigger_manual_scrape():
+    """Trigger manual data scraping"""
+    try:
+        from pdf_scraper import run_scraping
+        result = run_scraping()
+        
+        if result:
+            return jsonify({'success': True, 'message': 'Manual scrape completed successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Manual scrape failed'})
+    except Exception as e:
+        logging.error(f"Error triggering manual scrape: {e}")
+        return jsonify({'error': 'Failed to trigger manual scrape'}), 500
+
+@app.route('/api/admin/clear-old-data', methods=['POST'])
+def clear_old_data():
+    """Clear old hospital capacity data"""
+    try:
+        from datetime import datetime, timedelta
+        
+        # Delete data older than 30 days
+        cutoff_date = datetime.utcnow() - timedelta(days=30)
+        old_records = HospitalCapacity.query.filter(HospitalCapacity.timestamp < cutoff_date)
+        count = old_records.count()
+        old_records.delete()
+        
+        # Also clear old scraping logs
+        old_logs = ScrapingLog.query.filter(ScrapingLog.timestamp < cutoff_date)
+        log_count = old_logs.count()
+        old_logs.delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Cleared {count} old capacity records and {log_count} old log entries'
+        })
+    except Exception as e:
+        logging.error(f"Error clearing old data: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to clear old data'}), 500

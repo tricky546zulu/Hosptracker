@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Hospital Capacity Monitor{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Admin Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-3">Admin Dashboard</h1>
+            <p class="text-muted">Monitor scraping status, system health, and data validation</p>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">System Status</h5>
+                    <h3 class="text-success" id="system-status">Active</h3>
+                    <small class="text-muted">Last update: <span id="last-update-time">Loading...</span></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Data Sources</h5>
+                    <h3 class="text-info" id="active-sources">4/4</h3>
+                    <small class="text-muted">RUH, SPH, SCH, JPCH</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Validation Blocks</h5>
+                    <h3 class="text-warning" id="validation-blocks">0</h3>
+                    <small class="text-muted">Last 24 hours</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Success Rate</h5>
+                    <h3 class="text-success" id="success-rate">100%</h3>
+                    <small class="text-muted">Valid data extractions</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs -->
+    <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="scraping-tab" data-bs-toggle="tab" data-bs-target="#scraping" type="button" role="tab">
+                Scraping Logs
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="validation-tab" data-bs-toggle="tab" data-bs-target="#validation" type="button" role="tab">
+                Data Validation
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="errors-tab" data-bs-toggle="tab" data-bs-target="#errors" type="button" role="tab">
+                Error Reports
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                Settings
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content mt-3" id="adminTabContent">
+        <!-- Scraping Logs Tab -->
+        <div class="tab-pane fade show active" id="scraping" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Scraping Activity</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshScrapingLogs()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="scraping-logs-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                    <th>PDF Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scraping-logs-body">
+                                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Validation Tab -->
+        <div class="tab-pane fade" id="validation" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Data Validation Rules</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>RUH Validation</h6>
+                            <div class="alert alert-info">
+                                <strong>Minimum:</strong> 45 patients<br>
+                                <strong>Maximum:</strong> 200 patients<br>
+                                <strong>Reason:</strong> RUH typically maintains 55+ ED patients
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Recent Validation Events</h6>
+                            <div id="validation-events">
+                                <div class="small text-muted">Loading validation events...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4">Hospital Data Quality</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Last Valid Reading</th>
+                                    <th>Patient Count</th>
+                                    <th>Data Quality</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-quality-table">
+                                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Reports Tab -->
+        <div class="tab-pane fade" id="errors" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">User Error Reports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="error-reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Issue Type</th>
+                                    <th>Description</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="error-reports-body">
+                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">System Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Scraping Schedule</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Update Interval</label>
+                                <select class="form-select" id="update-interval">
+                                    <option value="30">Every 30 minutes</option>
+                                    <option value="60">Every hour</option>
+                                    <option value="120">Every 2 hours</option>
+                                </select>
+                            </div>
+                            
+                            <h6>Data Source</h6>
+                            <div class="mb-3">
+                                <label class="form-label">PDF URL</label>
+                                <input type="url" class="form-control" id="pdf-url" 
+                                       value="https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Data Retention</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Keep data for</label>
+                                <select class="form-select" id="retention-period">
+                                    <option value="7">7 days</option>
+                                    <option value="30" selected>30 days</option>
+                                    <option value="90">90 days</option>
+                                </select>
+                            </div>
+
+                            <h6>Manual Actions</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="triggerManualScrape()">
+                                    <i class="fas fa-download"></i> Trigger Manual Scrape
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="clearOldData()">
+                                    <i class="fas fa-broom"></i> Clear Old Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Admin Dashboard JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    loadAdminDashboard();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadAdminDashboard, 30000);
+});
+
+async function loadAdminDashboard() {
+    await Promise.all([
+        loadScrapingLogs(),
+        loadSystemStats(),
+        loadDataQuality(),
+        loadErrorReports()
+    ]);
+}
+
+async function loadScrapingLogs() {
+    try {
+        const response = await fetch('/api/admin/scraping-logs');
+        const logs = await response.json();
+        
+        const tbody = document.getElementById('scraping-logs-body');
+        tbody.innerHTML = '';
+        
+        logs.forEach(log => {
+            const row = document.createElement('tr');
+            const statusClass = log.status === 'success' ? 'text-success' : 'text-danger';
+            
+            row.innerHTML = `
+                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                <td><span class="${statusClass}">${log.status}</span></td>
+                <td>${log.message}</td>
+                <td><a href="${log.pdf_url}" target="_blank" class="small">View PDF</a></td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No scraping logs found</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading scraping logs:', error);
+    }
+}
+
+async function loadSystemStats() {
+    try {
+        const response = await fetch('/api/admin/stats');
+        const stats = await response.json();
+        
+        document.getElementById('system-status').textContent = stats.system_status;
+        document.getElementById('active-sources').textContent = `${stats.active_sources}/4`;
+        document.getElementById('validation-blocks').textContent = stats.validation_blocks;
+        document.getElementById('success-rate').textContent = `${stats.success_rate}%`;
+        document.getElementById('last-update-time').textContent = stats.last_update;
+        
+        // Update status colors
+        const statusElement = document.getElementById('system-status');
+        statusElement.className = stats.system_status === 'Active' ? 'text-success' : 'text-danger';
+    } catch (error) {
+        console.error('Error loading system stats:', error);
+    }
+}
+
+async function loadDataQuality() {
+    try {
+        const response = await fetch('/api/admin/data-quality');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('data-quality-table');
+        tbody.innerHTML = '';
+        
+        data.hospitals.forEach(hospital => {
+            const row = document.createElement('tr');
+            const qualityClass = hospital.quality === 'Good' ? 'text-success' : 
+                                hospital.quality === 'Warning' ? 'text-warning' : 'text-danger';
+            
+            row.innerHTML = `
+                <td>${hospital.name}</td>
+                <td>${hospital.last_reading}</td>
+                <td>${hospital.patient_count}</td>
+                <td><span class="${qualityClass}">${hospital.quality}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error loading data quality:', error);
+    }
+}
+
+async function loadErrorReports() {
+    try {
+        const response = await fetch('/api/admin/error-reports');
+        const reports = await response.json();
+        
+        const tbody = document.getElementById('error-reports-body');
+        tbody.innerHTML = '';
+        
+        reports.forEach(report => {
+            const row = document.createElement('tr');
+            const statusClass = report.status === 'resolved' ? 'text-success' : 
+                              report.status === 'reviewing' ? 'text-warning' : 'text-danger';
+            
+            row.innerHTML = `
+                <td>${new Date(report.timestamp).toLocaleDateString()}</td>
+                <td>${report.issue_type}</td>
+                <td>${report.description.substring(0, 50)}...</td>
+                <td>${report.contact_info || 'Anonymous'}</td>
+                <td><span class="${statusClass}">${report.status}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="updateReportStatus(${report.id}, 'reviewing')">
+                        Review
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="updateReportStatus(${report.id}, 'resolved')">
+                        Resolve
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        if (reports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No error reports</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading error reports:', error);
+    }
+}
+
+function refreshScrapingLogs() {
+    loadScrapingLogs();
+}
+
+async function updateReportStatus(reportId, status) {
+    try {
+        await fetch(`/api/admin/error-reports/${reportId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: status })
+        });
+        
+        loadErrorReports(); // Refresh the table
+    } catch (error) {
+        console.error('Error updating report status:', error);
+    }
+}
+
+async function triggerManualScrape() {
+    try {
+        const response = await fetch('/api/admin/trigger-scrape', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('Manual scrape triggered successfully');
+            setTimeout(loadAdminDashboard, 2000); // Refresh after 2 seconds
+        } else {
+            alert('Failed to trigger manual scrape');
+        }
+    } catch (error) {
+        console.error('Error triggering manual scrape:', error);
+        alert('Error triggering manual scrape');
+    }
+}
+
+async function clearOldData() {
+    if (confirm('Are you sure you want to clear old data? This action cannot be undone.')) {
+        try {
+            const response = await fetch('/api/admin/clear-old-data', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                alert('Old data cleared successfully');
+                loadAdminDashboard();
+            } else {
+                alert('Failed to clear old data');
+            }
+        } catch (error) {
+            console.error('Error clearing old data:', error);
+            alert('Error clearing old data');
+        }
+    }
+}
+</script>
+{% endblock %}
