@@ -854,11 +854,12 @@ def detect_data_anomalies():
                                              record.total_patients > hospital_range['max'] * 1.5) else 'medium'
                     })
                 
-                # Check for dramatic drops (>50% decrease)
+                # Check for dramatic changes (drops or jumps)
                 next_record = recent_data[i + 1]
                 if next_record.total_patients is not None:
                     percentage_change = abs(record.total_patients - next_record.total_patients) / max(next_record.total_patients, 1) * 100
                     
+                    # Detect dramatic drops (>50% decrease)
                     if percentage_change > 50 and record.total_patients < next_record.total_patients * 0.5:
                         anomalies.append({
                             'id': record.id,
@@ -866,9 +867,35 @@ def detect_data_anomalies():
                             'hospital': hospital_code,
                             'value': record.total_patients,
                             'previous_value': next_record.total_patients,
-                            'percentage_drop': round(percentage_change, 1),
+                            'percentage_change': round(percentage_change, 1),
                             'timestamp': record.timestamp.isoformat(),
                             'severity': 'high'
+                        })
+                    
+                    # Detect sudden jumps (>50% increase)
+                    elif percentage_change > 50 and record.total_patients > next_record.total_patients * 1.5:
+                        anomalies.append({
+                            'id': record.id,
+                            'type': 'sudden_jump',
+                            'hospital': hospital_code,
+                            'value': record.total_patients,
+                            'previous_value': next_record.total_patients,
+                            'percentage_change': round(percentage_change, 1),
+                            'timestamp': record.timestamp.isoformat(),
+                            'severity': 'high'
+                        })
+                    
+                    # Detect moderate unusual changes (20-50% change)
+                    elif percentage_change > 20:
+                        anomalies.append({
+                            'id': record.id,
+                            'type': 'unusual_change',
+                            'hospital': hospital_code,
+                            'value': record.total_patients,
+                            'previous_value': next_record.total_patients,
+                            'percentage_change': round(percentage_change, 1),
+                            'timestamp': record.timestamp.isoformat(),
+                            'severity': 'medium'
                         })
         
         return jsonify({
@@ -1037,3 +1064,129 @@ def get_current_saskatchewan_time():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/snapshots/create', methods=['POST'])
+def create_hospital_snapshot():
+    """Create a shareable hospital status snapshot"""
+    try:
+        import secrets
+        import pytz
+        import json
+        
+        # Generate unique snapshot ID
+        snapshot_id = secrets.token_urlsafe(16)
+        
+        # Get current hospital data
+        hospitals = ['RUH', 'SPH', 'SCH', 'JPCH']
+        hospital_data = []
+        
+        for hospital_code in hospitals:
+            latest = HospitalCapacity.query.filter_by(
+                hospital_code=hospital_code
+            ).order_by(HospitalCapacity.timestamp.desc()).first()
+            
+            if latest:
+                hospital_data.append({
+                    'hospital_code': hospital_code,
+                    'hospital_name': latest.hospital_name,
+                    'total_patients': latest.total_patients,
+                    'timestamp': latest.timestamp.isoformat(),
+                    'capacity_level': _get_capacity_level(hospital_code, latest.total_patients)
+                })
+        
+        # Saskatchewan timezone
+        saskatchewan_tz = pytz.timezone('America/Regina')
+        snapshot_time = datetime.utcnow().replace(tzinfo=pytz.UTC).astimezone(saskatchewan_tz)
+        
+        # Create snapshot data
+        snapshot_data = {
+            'id': snapshot_id,
+            'created_at': snapshot_time.isoformat(),
+            'formatted_time': snapshot_time.strftime('%B %d, %Y at %I:%M %p %Z'),
+            'hospitals': hospital_data,
+            'total_ed_patients': sum(h['total_patients'] for h in hospital_data if h['total_patients']),
+            'data_source': 'eHealth Saskatchewan Official Reports'
+        }
+        
+        # Store snapshot in database (simplified storage in ScrapingLog for now)
+        log_entry = ScrapingLog(
+            timestamp=datetime.utcnow(),
+            status='snapshot',
+            message=f'Snapshot created: {snapshot_id}',
+            pdf_url=json.dumps(snapshot_data)
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'snapshot_id': snapshot_id,
+            'snapshot_url': f'/snapshot/{snapshot_id}',
+            'data': snapshot_data
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/snapshot/<snapshot_id>')
+def view_snapshot(snapshot_id):
+    """View a shared hospital status snapshot"""
+    try:
+        import json
+        # Find snapshot in logs
+        snapshot_log = ScrapingLog.query.filter(
+            ScrapingLog.status == 'snapshot',
+            ScrapingLog.message.like(f'%{snapshot_id}%')
+        ).first()
+        
+        if not snapshot_log:
+            return render_template('error.html', error='Snapshot not found'), 404
+            
+        snapshot_data = json.loads(snapshot_log.pdf_url)
+        return render_template('snapshot.html', snapshot=snapshot_data)
+        
+    except Exception as e:
+        return render_template('error.html', error='Snapshot not found'), 404
+
+@app.route('/api/snapshots/<snapshot_id>')
+def get_snapshot_data(snapshot_id):
+    """Get snapshot data as JSON"""
+    try:
+        import json
+        snapshot_log = ScrapingLog.query.filter(
+            ScrapingLog.status == 'snapshot',
+            ScrapingLog.message.like(f'%{snapshot_id}%')
+        ).first()
+        
+        if not snapshot_log:
+            return jsonify({'error': 'Snapshot not found'}), 404
+            
+        snapshot_data = json.loads(snapshot_log.pdf_url)
+        return jsonify(snapshot_data)
+        
+    except Exception as e:
+        return jsonify({'error': 'Snapshot not found'}), 404
+
+def _get_capacity_level(hospital_code, patient_count):
+    """Get capacity level description for a hospital"""
+    if not patient_count:
+        return 'unknown'
+    
+    ranges = {
+        'RUH': {'low': 40, 'medium': 60, 'high': 75},
+        'SPH': {'low': 25, 'medium': 35, 'high': 45},
+        'SCH': {'low': 20, 'medium': 30, 'high': 35},
+        'JPCH': {'low': 10, 'medium': 18, 'high': 22}
+    }
+    
+    thresholds = ranges.get(hospital_code, {'low': 0, 'medium': 50, 'high': 80})
+    
+    if patient_count <= thresholds['low']:
+        return 'low'
+    elif patient_count <= thresholds['medium']:
+        return 'moderate'
+    elif patient_count <= thresholds['high']:
+        return 'high'
+    else:
+        return 'very_high'
