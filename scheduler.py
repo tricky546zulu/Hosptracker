@@ -12,10 +12,10 @@ def start_scheduler():
     if scheduler is None:
         scheduler = BackgroundScheduler()
         
-        # Schedule scraping every 30 minutes
+        # Schedule scraping every hour
         scheduler.add_job(
             func=run_scraping,
-            trigger=IntervalTrigger(minutes=30),
+            trigger=IntervalTrigger(hours=1),
             id='hospital_data_scraping',
             name='Hospital Data Scraping',
             replace_existing=True
