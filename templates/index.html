@@ -93,34 +93,7 @@
     </div>
 </div>
 
-<!-- Charts Section -->
-<div class="row g-4">
-    <!-- Current Overview Chart -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header d-flex align-items-center">
-                <i data-feather="bar-chart-2" class="me-2"></i>
-                <h5 class="mb-0">Current Patient Counts</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="overviewChart" height="200"></canvas>
-            </div>
-        </div>
-    </div>
 
-    <!-- Trend Chart -->
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header d-flex align-items-center">
-                <i data-feather="trending-up" class="me-2"></i>
-                <h5 class="mb-0">24-Hour Trends</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="trendChart" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Status Section -->
 <div class="row g-4 mt-4">
@@ -142,12 +115,8 @@
 
 {% block scripts %}
 <script>
-let overviewChart = null;
-let trendChart = null;
-
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    initializeCharts();
     loadHospitalData();
     loadScrapingStatus();
     
@@ -158,63 +127,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 10 * 60 * 1000);
 });
 
-function initializeCharts() {
-    // Overview Chart
-    const overviewCtx = document.getElementById('overviewChart').getContext('2d');
-    overviewChart = new Chart(overviewCtx, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Emergency Department Patients',
-                data: [],
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 10
-                    }
-                }
-            }
-        }
-    });
-
-    // Trend Chart  
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    trendChart = new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: []
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
 function loadHospitalData() {
     fetch('/api/hospital-data')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateHospitalCards(data.data);
-                updateOverviewChart(data.data);
-                loadTrendData();
             }
         })
         .catch(error => {
@@ -240,45 +158,7 @@ function updateHospitalCards(hospitals) {
     });
 }
 
-function updateOverviewChart(hospitals) {
-    if (!overviewChart) return;
-    
-    const labels = hospitals.map(h => h.hospital_code);
-    const data = hospitals.map(h => h.total_patients || 0);
-    
-    overviewChart.data.labels = labels;
-    overviewChart.data.datasets[0].data = data;
-    overviewChart.update();
-}
 
-function loadTrendData() {
-    // Load trend data for all hospitals
-    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
-    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
-    
-    Promise.all(hospitals.map(code => 
-        fetch(`/api/hospital-history/${code}`).then(r => r.json())
-    )).then(results => {
-        const datasets = results.map((result, index) => {
-            if (result.success) {
-                return {
-                    label: hospitals[index],
-                    data: result.data.reverse().map(item => ({
-                        x: new Date(item.timestamp),
-                        y: item.total_patients
-                    })),
-                    borderColor: colors[index],
-                    backgroundColor: colors[index] + '20',
-                    tension: 0.1
-                };
-            }
-            return null;
-        }).filter(d => d !== null);
-        
-        trendChart.data.datasets = datasets;
-        trendChart.update();
-    });
-}
 
 function loadScrapingStatus() {
     fetch('/api/scraping-status')
