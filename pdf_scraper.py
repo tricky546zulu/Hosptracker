@@ -55,7 +55,8 @@ class HospitalDataScraper:
             if saved_count > 0:
                 self._log_result("success", f"Scraped data for {saved_count} hospitals")
                 logging.info(f"Successfully saved {saved_count} hospitals")
-                self._cleanup_anomalies()
+                # Temporarily disabled cleanup to preserve authentic PDF data
+                # self._cleanup_anomalies()
                 return True
             else:
                 self._log_result("error", "No valid data to save")
