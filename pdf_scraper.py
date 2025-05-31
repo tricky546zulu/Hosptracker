@@ -153,7 +153,7 @@ class HospitalDataScraper:
             # Range validation
             ranges = {
                 'RUH': (20, 150),
-                'SPH': (2, 25),
+                'SPH': (2, 30),       # Updated to include current value of 26
                 'SCH': (1, 70),
                 'JPCH': (5, 40)
             }
