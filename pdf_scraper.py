@@ -57,9 +57,9 @@ class HospitalDataScraper:
                 # Convert entire dataframe to string for searching
                 table_text = df.to_string()
                 
-                # Look for Emergency Department section with "Pts in ED" header
-                if 'Pts in ED' in table_text or 'Total' in table_text:
-                    logging.info(f"Found Emergency Department data in table {table_num + 1}")
+                # Look for the specific Emergency Department summary table
+                if 'Pts in ED' in table_text and 'Site' in table_text:
+                    logging.info(f"Found Emergency Department summary table {table_num + 1}")
                     
                     # Look for hospital codes in each row
                     for idx, row in df.iterrows():
@@ -98,17 +98,20 @@ class HospitalDataScraper:
         return None
     
     def _extract_patient_count(self, row):
-        """Extract patient count from a table row"""
+        """Extract patient count from a table row - look for the rightmost number"""
+        numbers = []
         for cell in row:
             try:
                 cell_str = str(cell).strip()
                 if cell_str.isdigit():
                     count = int(cell_str)
                     if 0 <= count <= 500:  # Reasonable range for ED patients
-                        return count
+                        numbers.append(count)
             except (ValueError, TypeError):
                 continue
-        return None
+        
+        # Return the last (rightmost) number found, as this is typically the total
+        return numbers[-1] if numbers else None
     
     def _save_hospital_data(self, hospital_data):
         """Save hospital data to database"""
