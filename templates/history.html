@@ -95,11 +95,27 @@
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="bar-chart-2" class="me-2"></i>
-                <h5 class="mb-0">Weekly Summary Statistics</h5>
+                <h5 class="mb-0">7-Day Summary Statistics</h5>
             </div>
             <div class="card-body">
-                <div id="summary-stats" class="row g-3">
-                    <p class="text-muted">Loading summary statistics...</p>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="summary-table">
+                        <thead>
+                            <tr>
+                                <th>Hospital</th>
+                                <th>Current Patients</th>
+                                <th>7-Day Average</th>
+                                <th>Peak This Week</th>
+                                <th>Lowest This Week</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-stats">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Loading summary statistics...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -138,29 +154,61 @@ function initializeHistoricalChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Number of Patients'
+                        text: 'Emergency Department Patients'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
                 x: {
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM DD HH:mm',
+                            day: 'MMM DD'
+                        },
+                        tooltipFormat: 'MMM DD, YYYY HH:mm'
+                    },
                     title: {
                         display: true,
                         text: 'Date/Time (Saskatchewan Time)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             },
             plugins: {
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 1
                 }
             },
             interaction: {
                 mode: 'nearest',
                 axis: 'x',
                 intersect: false
+            },
+            elements: {
+                line: {
+                    tension: 0.2
+                },
+                point: {
+                    radius: 3,
+                    hoverRadius: 6
+                }
             }
         }
     });
@@ -189,17 +237,28 @@ function loadHistoricalData() {
                 
                 allData[hospital] = sortedData;
                 
+                // Convert to Saskatchewan time for display
+                const saskData = sortedData.map(item => {
+                    const utcTime = new Date(item.timestamp);
+                    const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
+                    return {
+                        x: saskTime,
+                        y: item.total_patients
+                    };
+                });
+
                 datasets.push({
                     label: hospital,
-                    data: sortedData.map(item => ({
-                        x: new Date(item.timestamp),
-                        y: item.total_patients
-                    })),
+                    data: saskData,
                     borderColor: colors[hospital],
                     backgroundColor: colors[hospital] + '20',
-                    tension: 0.1,
+                    borderWidth: 2,
+                    fill: false,
                     pointRadius: 4,
-                    pointHoverRadius: 6
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: colors[hospital],
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
                 });
                 
                 // Update individual hospital table
@@ -288,48 +347,65 @@ function updateSummaryStats(allData) {
         'JPCH': 'Jim Pattison Children\'s Hospital'
     };
     
-    Object.keys(allData).forEach(hospital => {
-        const data = allData[hospital];
-        if (data.length === 0) return;
-        
-        const counts = data.map(item => item.total_patients || 0);
-        const current = counts[counts.length - 1] || 0;
-        const max = Math.max(...counts) || 0;
-        const min = Math.min(...counts) || 0;
-        const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
-        
-        statsHTML += `
-            <div class="col-md-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h6 class="card-title">${hospital}</h6>
-                        <small class="text-muted d-block mb-2">${hospitalNames[hospital] || hospital}</small>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <small class="text-muted">Current</small>
-                                <div class="fw-bold fs-5">${current}</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">7-Day Avg</small>
-                                <div class="fw-bold fs-5">${avg}</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">Peak</small>
-                                <div class="fw-bold text-danger">${max}</div>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted">Low</small>
-                                <div class="fw-bold text-success">${min}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    if (statsHTML === '') {
-        statsHTML = '<div class="col-12"><p class="text-muted text-center">No data available for summary statistics</p></div>';
+    if (Object.keys(allData).length === 0) {
+        statsHTML = '<tr><td colspan="6" class="text-center text-muted">No data available for summary statistics</td></tr>';
+    } else {
+        Object.keys(allData).forEach(hospital => {
+            const data = allData[hospital];
+            if (data.length === 0) return;
+            
+            const counts = data.map(item => item.total_patients || 0);
+            const current = counts[counts.length - 1] || 0;
+            const max = Math.max(...counts) || 0;
+            const min = Math.min(...counts) || 0;
+            const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
+            
+            // Calculate trend (compare first 25% vs last 25% of data)
+            const quarterSize = Math.floor(counts.length / 4);
+            const firstQuarter = quarterSize > 0 ? counts.slice(0, quarterSize) : [counts[0]];
+            const lastQuarter = quarterSize > 0 ? counts.slice(-quarterSize) : [counts[counts.length - 1]];
+            
+            const firstAvg = firstQuarter.reduce((a, b) => a + b, 0) / firstQuarter.length;
+            const lastAvg = lastQuarter.reduce((a, b) => a + b, 0) / lastQuarter.length;
+            const trendPercent = ((lastAvg - firstAvg) / firstAvg * 100).toFixed(1);
+            
+            let trendIcon = '';
+            let trendClass = '';
+            if (trendPercent > 5) {
+                trendIcon = '↗️';
+                trendClass = 'text-danger';
+            } else if (trendPercent < -5) {
+                trendIcon = '↘️';
+                trendClass = 'text-success';
+            } else {
+                trendIcon = '→';
+                trendClass = 'text-muted';
+            }
+            
+            statsHTML += `
+                <tr>
+                    <td>
+                        <strong>${hospital}</strong><br>
+                        <small class="text-muted">${hospitalNames[hospital] || hospital}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-primary fs-6">${current}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fs-6">${avg}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="text-danger fw-bold">${max}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="text-success fw-bold">${min}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="${trendClass}">${trendIcon} ${Math.abs(trendPercent)}%</span>
+                    </td>
+                </tr>
+            `;
+        });
     }
     
     container.innerHTML = statsHTML;
