@@ -210,11 +210,11 @@ class HospitalDataScraper:
             
             cutoff = datetime.utcnow() - timedelta(hours=24)
             
-            # Remove out-of-range values
+            # Remove out-of-range values - updated to match current data ranges
             thresholds = {
                 'RUH': {'min': 15, 'max': 200},
-                'SPH': {'min': 8, 'max': 100},
-                'SCH': {'min': 12, 'max': 80},
+                'SPH': {'min': 2, 'max': 100},   # Allow SPH down to 2 (current: 26)
+                'SCH': {'min': 1, 'max': 80},    # Allow SCH down to 1 (current: 3)
                 'JPCH': {'min': 3, 'max': 50}
             }
             
