@@ -16,7 +16,6 @@ class ScrapingLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), nullable=False)
     message = db.Column(db.Text)
-    hospitals_processed = db.Column(db.Integer, default=0)
     
     def __repr__(self):
         return f'<ScrapingLog {self.timestamp}: {self.status}>'

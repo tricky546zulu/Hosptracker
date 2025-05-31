@@ -54,17 +54,19 @@ class HospitalDataScraper:
                 df = table.df
                 logging.info(f"Processing table {table_num + 1} with shape {df.shape}")
                 
-                # Look for Emergency Department section
-                for idx, row in df.iterrows():
-                    row_text = ' '.join(str(cell).strip() for cell in row if str(cell).strip())
+                # Convert entire dataframe to string for searching
+                table_text = df.to_string()
+                
+                # Look for Emergency Department section with "Pts in ED" header
+                if 'Pts in ED' in table_text or 'Total' in table_text:
+                    logging.info(f"Found Emergency Department data in table {table_num + 1}")
                     
-                    if 'Emergency Department' in row_text or 'Emergency' in row_text:
-                        logging.info(f"Found Emergency Department section in table {table_num + 1}")
-                        
-                        # Extract hospital data from this table
-                        table_data = self._parse_emergency_table(df, idx)
-                        hospital_data.extend(table_data)
-                        break
+                    # Look for hospital codes in each row
+                    for idx, row in df.iterrows():
+                        row_data = self._extract_hospital_from_row(row)
+                        if row_data:
+                            hospital_data.append(row_data)
+                            logging.info(f"Found {row_data['hospital_code']}: {row_data['total_patients']} patients")
                         
             except Exception as e:
                 logging.warning(f"Error processing table {table_num + 1}: {str(e)}")
@@ -72,35 +74,28 @@ class HospitalDataScraper:
         
         return hospital_data
     
-    def _parse_emergency_table(self, df, start_idx):
-        """Parse Emergency Department table starting from given index"""
-        hospital_data = []
-        
-        # Look for hospital codes and patient counts in subsequent rows
-        for idx in range(start_idx, min(start_idx + 20, len(df))):
-            try:
-                row = df.iloc[idx]
-                row_text = ' '.join(str(cell).strip() for cell in row if str(cell).strip())
-                
-                # Check for hospital codes
-                for code, name in self.hospital_mapping.items():
-                    if code in row_text:
-                        # Extract patient count from the row
-                        patient_count = self._extract_patient_count(row)
+    def _extract_hospital_from_row(self, row):
+        """Extract hospital data from a single row"""
+        try:
+            row_text = ' '.join(str(cell).strip() for cell in row if str(cell).strip())
+            
+            # Check for hospital codes
+            for code, name in self.hospital_mapping.items():
+                if code in row_text:
+                    # Extract patient count from the row
+                    patient_count = self._extract_patient_count(row)
+                    
+                    if patient_count is not None:
+                        return {
+                            'hospital_code': code,
+                            'hospital_name': name,
+                            'total_patients': patient_count
+                        }
                         
-                        if patient_count is not None:
-                            hospital_data.append({
-                                'hospital_code': code,
-                                'hospital_name': name,
-                                'total_patients': patient_count
-                            })
-                            logging.info(f"Found {code}: {patient_count} patients")
-                            
-            except Exception as e:
-                logging.warning(f"Error parsing row {idx}: {str(e)}")
-                continue
-        
-        return hospital_data
+        except Exception as e:
+            logging.warning(f"Error parsing row: {str(e)}")
+            
+        return None
     
     def _extract_patient_count(self, row):
         """Extract patient count from a table row"""
@@ -138,7 +133,6 @@ class HospitalDataScraper:
             log_entry = ScrapingLog()
             log_entry.status = status
             log_entry.message = message
-            log_entry.hospitals_processed = 0
             db.session.add(log_entry)
             db.session.commit()
         except Exception as e:
