@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Header Section -->
+<!-- Header -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
@@ -9,40 +9,29 @@
             Saskatchewan Hospital Emergency Department Monitor
         </h1>
         <p class="text-muted mb-0">
-            Live patient counts extracted from official eHealth Saskatchewan PDF reports
+            Live patient counts from eHealth Saskatchewan PDF reports
             <a href="https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf" target="_blank" class="ms-2">
                 <i data-feather="external-link" style="width: 14px; height: 14px;"></i>
             </a>
         </p>
     </div>
-    <div class="d-flex align-items-center gap-2">
-        <button id="refresh-btn" class="btn btn-outline-primary" onclick="refreshData()">
-            <i data-feather="refresh-cw" class="me-1"></i>
-            Refresh
-        </button>
-        <div id="connection-status" class="badge bg-success">
-            <i data-feather="wifi" class="me-1"></i>
-            Connected
-        </div>
-    </div>
+    <button id="refresh-btn" class="btn btn-outline-primary" onclick="refreshData()">
+        <i data-feather="refresh-cw" class="me-1"></i>
+        Refresh
+    </button>
 </div>
 
-<!-- Data Source Information -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div id="data-status-alert" class="alert alert-info d-flex align-items-center" role="alert">
-            <i data-feather="info" class="me-2"></i>
-            <div>
-                <strong>Data Source:</strong> Automated extraction from eHealth Saskatchewan PDF reports. 
-                Shows total patients currently in Emergency Departments.
-                <span id="update-frequency">Updates every 30-60 minutes when new reports are published.</span>
-            </div>
-        </div>
+<!-- Status Alert -->
+<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i data-feather="info" class="me-2"></i>
+    <div>
+        <strong>Data Source:</strong> Automated extraction from eHealth Saskatchewan Emergency Department reports. 
+        Updates every 30 minutes when new data is published.
     </div>
 </div>
 
 <!-- Hospital Cards -->
-<div class="row g-4 mb-5">
+<div class="row g-4 mb-4">
     <!-- Royal University Hospital -->
     <div class="col-lg-3">
         <div class="card h-100">
@@ -50,17 +39,10 @@
                 <i data-feather="home" class="me-2"></i>
                 <h5 class="mb-0">Royal University Hospital</h5>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
-                        <span id="ruh-change" class="badge bg-light text-dark">-</span>
-                    </div>
-                    <h1 class="display-4 mb-2" id="ruh-total-patients">-</h1>
-                    <small class="text-muted" id="ruh-time-since">Loading...</small>
-                </div>
-                <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
-                    <canvas id="ruh-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-2" id="ruh-total-patients">-</h1>
+                <p class="text-muted mb-0">Emergency Department Patients</p>
+                <small class="text-muted" id="ruh-time">Loading...</small>
             </div>
         </div>
     </div>
@@ -72,17 +54,10 @@
                 <i data-feather="home" class="me-2"></i>
                 <h5 class="mb-0">St. Paul's Hospital</h5>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
-                        <span id="sph-change" class="badge bg-light text-dark">-</span>
-                    </div>
-                    <h1 class="display-4 mb-2" id="sph-total-patients">-</h1>
-                    <small class="text-muted" id="sph-time-since">Loading...</small>
-                </div>
-                <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
-                    <canvas id="sph-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-2" id="sph-total-patients">-</h1>
+                <p class="text-muted mb-0">Emergency Department Patients</p>
+                <small class="text-muted" id="sph-time">Loading...</small>
             </div>
         </div>
     </div>
@@ -94,17 +69,10 @@
                 <i data-feather="home" class="me-2"></i>
                 <h5 class="mb-0">Saskatoon City Hospital</h5>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
-                        <span id="sch-change" class="badge bg-light text-dark">-</span>
-                    </div>
-                    <h1 class="display-4 mb-2" id="sch-total-patients">-</h1>
-                    <small class="text-muted" id="sch-time-since">Loading...</small>
-                </div>
-                <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
-                    <canvas id="sch-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-2" id="sch-total-patients">-</h1>
+                <p class="text-muted mb-0">Emergency Department Patients</p>
+                <small class="text-muted" id="sch-time">Loading...</small>
             </div>
         </div>
     </div>
@@ -116,17 +84,10 @@
                 <i data-feather="home" class="me-2"></i>
                 <h5 class="mb-0">Jim Pattison Children's Hospital</h5>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
-                        <span id="jpch-change" class="badge bg-light text-dark">-</span>
-                    </div>
-                    <h1 class="display-4 mb-2" id="jpch-total-patients">-</h1>
-                    <small class="text-muted" id="jpch-time-since">Loading...</small>
-                </div>
-                <div class="mini-chart-container" style="height: 150px; margin-top: 15px;">
-                    <canvas id="jpch-mini-chart" width="300" height="150" style="width: 100%; height: 150px;"></canvas>
-                </div>
+            <div class="card-body text-center">
+                <h1 class="display-4 mb-2" id="jpch-total-patients">-</h1>
+                <p class="text-muted mb-0">Emergency Department Patients</p>
+                <small class="text-muted" id="jpch-time">Loading...</small>
             </div>
         </div>
     </div>
@@ -134,195 +95,246 @@
 
 <!-- Charts Section -->
 <div class="row g-4">
-    <!-- Capacity Percentage Chart -->
+    <!-- Current Overview Chart -->
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="bar-chart-2" class="me-2"></i>
-                <h5 class="mb-0">Current Emergency Department Patient Counts</h5>
-                <small class="text-muted ms-2">Live data from eHealth Saskatchewan</small>
+                <h5 class="mb-0">Current Patient Counts</h5>
             </div>
             <div class="card-body">
-                <canvas id="capacityChart" width="400" height="200"></canvas>
+                <canvas id="overviewChart" height="200"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- Known Issues Section -->
+    <!-- Trend Chart -->
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
-                <i data-feather="info" class="me-2"></i>
-                <h5 class="mb-0">Known Issues</h5>
-                <span class="badge bg-warning ms-2">In Progress</span>
+                <i data-feather="trending-up" class="me-2"></i>
+                <h5 class="mb-0">24-Hour Trends</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-warning d-flex align-items-start">
-                    <i data-feather="clock" class="me-2 mt-1"></i>
-                    <div>
-                        <strong>Time Display Synchronization</strong>
-                        <p class="mb-1 small">Chart timestamps are currently showing UTC time instead of Saskatchewan time (UTC-6). 
-                        Fix is in progress to properly display all times in Saskatchewan timezone.</p>
-                        <p class="mb-0 small text-muted">Expected fix: Next update cycle</p>
-                    </div>
-                </div>
-                <div class="alert alert-info d-flex align-items-start">
-                    <i data-feather="refresh-cw" class="me-2 mt-1"></i>
-                    <div>
-                        <strong>Data Update Schedule</strong>
-                        <p class="mb-0 small">New data is available approximately every 30-60 minutes when eHealth Saskatchewan publishes updated reports. 
-                        Manual refresh may not show newer data if no updates have been published.</p>
-                    </div>
-                </div>
+                <canvas id="trendChart" height="200"></canvas>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Error Reporting Section -->
-    <div class="col-lg-6">
+<!-- Status Section -->
+<div class="row g-4 mt-4">
+    <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center">
-                <i data-feather="alert-triangle" class="me-2"></i>
-                <h5 class="mb-0">Report Issues</h5>
+                <i data-feather="clock" class="me-2"></i>
+                <h5 class="mb-0">System Status</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted mb-3">Found incorrect data or experiencing issues? Help us improve the system.</p>
-                <form id="error-report-form">
-                    <div class="mb-3">
-                        <label for="issue-type" class="form-label">Issue Type</label>
-                        <select class="form-select" id="issue-type" required>
-                            <option value="">Select issue type...</option>
-                            <option value="incorrect-data">Incorrect patient count</option>
-                            <option value="missing-data">Missing or outdated data</option>
-                            <option value="website-error">Website not working properly</option>
-                            <option value="time-sync">Time display issues</option>
-                            <option value="other">Other issue</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="issue-description" class="form-label">Description</label>
-                        <textarea class="form-control" id="issue-description" rows="3" 
-                                  placeholder="Please describe the issue you encountered..." required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="contact-info" class="form-label">Contact (optional)</label>
-                        <input type="email" class="form-control" id="contact-info" 
-                               placeholder="your.email@example.com">
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-feather="send" class="me-1"></i>
-                        Submit Report
-                    </button>
-                </form>
-                <div id="report-success" class="alert alert-success mt-3 d-none">
-                    <i data-feather="check-circle" class="me-2"></i>
-                    Thank you! Your report has been submitted successfully.
+                <div id="status-content">
+                    <p class="text-muted">Loading system status...</p>
                 </div>
             </div>
         </div>
     </div>
-
-</div>
-
-<!-- Error Alert (hidden by default) -->
-<div class="alert alert-danger d-none mt-4" id="error-alert" role="alert">
-    <i data-feather="alert-circle" class="me-2"></i>
-    <span id="error-message">An error occurred while loading hospital data.</span>
-</div>
-
-<!-- No Data Alert (hidden by default) -->
-<div class="alert alert-warning d-none mt-4" id="no-data-alert" role="alert">
-    <i data-feather="alert-triangle" class="me-2"></i>
-    No recent hospital data available. The system may be initializing or experiencing issues with data collection.
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 <script>
-// Initialize the dashboard when page loads
+let overviewChart = null;
+let trendChart = null;
+
+// Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    initializeDashboard();
+    initializeCharts();
+    loadHospitalData();
+    loadScrapingStatus();
     
-    // Auto-refresh every 10 minutes (optimized for deployment)
-    setInterval(function() {
+    // Auto-refresh every 10 minutes
+    setInterval(() => {
         loadHospitalData();
-        updateScrapingStatus();
+        loadScrapingStatus();
     }, 10 * 60 * 1000);
-    
-    // Refresh charts every 10 minutes (optimized for deployment)
-    setInterval(function() {
-        if (typeof loadHospitalChart === 'function') {
-            loadHospitalChart('RUH');
-            loadHospitalChart('SPH');
-            loadHospitalChart('SCH');
-            loadHospitalChart('JPCH');
-        }
-    }, 10 * 60 * 1000);
-    
-    // Handle error report form submission
-    const errorReportForm = document.getElementById('error-report-form');
-    if (errorReportForm) {
-        errorReportForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitErrorReport();
-        });
-    }
 });
 
-// Submit error report function
-function submitErrorReport() {
-    const issueType = document.getElementById('issue-type').value;
-    const description = document.getElementById('issue-description').value;
-    const contactInfo = document.getElementById('contact-info').value;
+function initializeCharts() {
+    // Overview Chart
+    const overviewCtx = document.getElementById('overviewChart').getContext('2d');
+    overviewChart = new Chart(overviewCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Emergency Department Patients',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 10
+                    }
+                }
+            }
+        }
+    });
+
+    // Trend Chart  
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function loadHospitalData() {
+    fetch('/api/hospital-data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateHospitalCards(data.data);
+                updateOverviewChart(data.data);
+                loadTrendData();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading hospital data:', error);
+        });
+}
+
+function updateHospitalCards(hospitals) {
+    hospitals.forEach(hospital => {
+        const code = hospital.hospital_code.toLowerCase();
+        const patientsElement = document.getElementById(`${code}-total-patients`);
+        const timeElement = document.getElementById(`${code}-time`);
+        
+        if (patientsElement) {
+            patientsElement.textContent = hospital.total_patients || '-';
+        }
+        
+        if (timeElement) {
+            const time = new Date(hospital.timestamp);
+            const saskTime = new Date(time.getTime() - (6 * 60 * 60 * 1000)); // UTC-6
+            timeElement.textContent = `Updated: ${saskTime.toLocaleTimeString('en-CA', {hour12: false})}`;
+        }
+    });
+}
+
+function updateOverviewChart(hospitals) {
+    if (!overviewChart) return;
     
-    if (!issueType || !description) {
-        alert('Please fill in all required fields.');
-        return;
+    const labels = hospitals.map(h => h.hospital_code);
+    const data = hospitals.map(h => h.total_patients || 0);
+    
+    overviewChart.data.labels = labels;
+    overviewChart.data.datasets[0].data = data;
+    overviewChart.update();
+}
+
+function loadTrendData() {
+    // Load trend data for all hospitals
+    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
+    
+    Promise.all(hospitals.map(code => 
+        fetch(`/api/hospital-history/${code}`).then(r => r.json())
+    )).then(results => {
+        const datasets = results.map((result, index) => {
+            if (result.success) {
+                return {
+                    label: hospitals[index],
+                    data: result.data.reverse().map(item => ({
+                        x: new Date(item.timestamp),
+                        y: item.total_patients
+                    })),
+                    borderColor: colors[index],
+                    backgroundColor: colors[index] + '20',
+                    tension: 0.1
+                };
+            }
+            return null;
+        }).filter(d => d !== null);
+        
+        trendChart.data.datasets = datasets;
+        trendChart.update();
+    });
+}
+
+function loadScrapingStatus() {
+    fetch('/api/scraping-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateStatusDisplay(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading status:', error);
+        });
+}
+
+function updateStatusDisplay(status) {
+    const statusContent = document.getElementById('status-content');
+    const timestamp = status.timestamp ? new Date(status.timestamp) : null;
+    const saskTime = timestamp ? new Date(timestamp.getTime() - (6 * 60 * 60 * 1000)) : null;
+    
+    let statusClass = 'text-success';
+    let statusIcon = 'check-circle';
+    
+    if (status.status === 'error') {
+        statusClass = 'text-danger';
+        statusIcon = 'alert-circle';
+    } else if (status.status === 'no_data') {
+        statusClass = 'text-warning';
+        statusIcon = 'clock';
     }
     
-    const submitButton = document.querySelector('#error-report-form button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<i data-feather="loader" class="me-1"></i>Submitting...';
+    statusContent.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i data-feather="${statusIcon}" class="${statusClass} me-2"></i>
+            <div>
+                <strong>Last Update:</strong> ${saskTime ? saskTime.toLocaleString('en-CA') : 'Never'}
+                <br>
+                <small class="text-muted">${status.message}</small>
+            </div>
+        </div>
+    `;
+    feather.replace();
+}
+
+function refreshData() {
+    const btn = document.getElementById('refresh-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-feather="loader" class="me-1"></i>Refreshing...';
     
-    fetch('/api/error-report', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            issue_type: issueType,
-            description: description,
-            contact_info: contactInfo
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Show success message
-            document.getElementById('report-success').classList.remove('d-none');
-            
-            // Reset form
-            document.getElementById('error-report-form').reset();
-            
-            // Hide success message after 5 seconds
-            setTimeout(() => {
-                document.getElementById('report-success').classList.add('d-none');
-            }, 5000);
-        } else {
-            alert('Failed to submit report: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error submitting report:', error);
-        alert('Failed to submit report. Please try again.');
-    })
-    .finally(() => {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalText;
-        feather.replace(); // Re-render feather icons
-    });
+    loadHospitalData();
+    loadScrapingStatus();
+    
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-feather="refresh-cw" class="me-1"></i>Refresh';
+        feather.replace();
+    }, 2000);
 }
 </script>
 {% endblock %}

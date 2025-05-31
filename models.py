@@ -3,32 +3,20 @@ from app import db
 
 class HospitalCapacity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    hospital_code = db.Column(db.String(10), nullable=False)  # RUH, SPH, SCH
+    hospital_code = db.Column(db.String(10), nullable=False)
     hospital_name = db.Column(db.String(100), nullable=False)
-    total_patients = db.Column(db.Integer)  # Total patients in Emergency Department
+    total_patients = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f'<HospitalCapacity {self.hospital_code}: {self.total_patients} total patients>'
+        return f'<HospitalCapacity {self.hospital_code}: {self.total_patients} patients>'
 
 class ScrapingLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), nullable=False)  # success, error
+    status = db.Column(db.String(20), nullable=False)
     message = db.Column(db.Text)
-    pdf_url = db.Column(db.String(500))
+    hospitals_processed = db.Column(db.Integer, default=0)
     
     def __repr__(self):
         return f'<ScrapingLog {self.timestamp}: {self.status}>'
-
-
-class ErrorReport(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    issue_type = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    contact_info = db.Column(db.String(100))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='new')  # new, reviewing, resolved
-    
-    def __repr__(self):
-        return f'<ErrorReport {self.id}: {self.issue_type} at {self.timestamp}>'
