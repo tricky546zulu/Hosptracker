@@ -1,18 +1,21 @@
 /* Modern Professional Styles for Saskatoon ED Monitor */
 
 :root {
-    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
-    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    --card-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.15);
-    --border-radius: 16px;
+    --primary-gradient: linear-gradient(135deg, #4f81c7 0%, #5a67d8 100%);
+    --success-gradient: linear-gradient(135deg, #38a169 0%, #48bb78 100%);
+    --warning-gradient: linear-gradient(135deg, #ed8936 0%, #f6ad55 100%);
+    --danger-gradient: linear-gradient(135deg, #e53e3e 0%, #fc8181 100%);
+    --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 12px 35px rgba(0, 0, 0, 0.12);
+    --border-radius: 12px;
+    --chart-primary: #4f81c7;
+    --chart-secondary: #718096;
+    --chart-accent: #38a169;
 }
 
 /* Background gradient for the body */
 body {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
     min-height: 100vh;
 }
 
@@ -81,13 +84,13 @@ body {
 }
 
 .capacity-low { 
-    background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+    background: linear-gradient(135deg, var(--chart-accent) 0%, #48bb78 100%);
 }
 .capacity-medium { 
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #ed8936 0%, #f6ad55 100%);
 }
 .capacity-high { 
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, var(--chart-primary) 0%, #5a67d8 100%);
 }
 
 /* Enhanced status badges */

@@ -73,11 +73,21 @@ async function loadHospitalData() {
 // Update hospital data cards
 function updateHospitalCards() {
     const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
+    let totalPatients = 0;
+    let latestTimestamp = null;
     
     hospitals.forEach(hospital => {
         const data = hospitalData[hospital];
         
         if (data && data.status === 'success') {
+            totalPatients += data.total_patients || 0;
+            
+            if (data.timestamp) {
+                const timestamp = new Date(data.timestamp);
+                if (!latestTimestamp || timestamp > latestTimestamp) {
+                    latestTimestamp = timestamp;
+                }
+            }
             updateHospitalCard(hospital, data);
         } else {
             updateHospitalCard(hospital, null);
