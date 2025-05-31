@@ -73,46 +73,16 @@ async function loadHospitalData() {
 // Update hospital data cards
 function updateHospitalCards() {
     const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
-    let totalPatients = 0;
-    let latestTimestamp = null;
     
     hospitals.forEach(hospital => {
         const data = hospitalData[hospital];
         
         if (data && data.status === 'success') {
-            totalPatients += data.total_patients || 0;
-            
-            if (data.timestamp) {
-                const timestamp = new Date(data.timestamp);
-                if (!latestTimestamp || timestamp > latestTimestamp) {
-                    latestTimestamp = timestamp;
-                }
-            }
             updateHospitalCard(hospital, data);
         } else {
             updateHospitalCard(hospital, null);
         }
     });
-    
-    // Update stats overview
-    updateStatsOverview(totalPatients, latestTimestamp);
-}
-
-// Update the stats overview section
-function updateStatsOverview(totalPatients, latestTimestamp) {
-    // Update total patients
-    const totalElement = document.getElementById('total-patients');
-    if (totalElement) {
-        totalElement.textContent = totalPatients;
-    }
-    
-    // Update minutes since last update
-    const lastUpdateElement = document.getElementById('last-update-mins');
-    if (lastUpdateElement && latestTimestamp) {
-        const now = new Date();
-        const diffMinutes = Math.floor((now - latestTimestamp) / (1000 * 60));
-        lastUpdateElement.textContent = diffMinutes;
-    }
 }
 
 // Update individual hospital card
@@ -490,13 +460,12 @@ async function loadHospitalChart(hospitalCode) {
                 // Get last 15 unique data points for cleaner display (most recent 15)
                 const recentData = filteredData.slice(-15);
                 
-                // Create consistent time labels in Saskatchewan time (UTC-6)
+                // Create consistent time labels in Saskatchewan time (UTC-6) 
                 const labels = recentData.map(item => {
-                    const utcDate = new Date(item.timestamp + 'Z'); // Ensure UTC parsing
-                    // Convert to Saskatchewan time (UTC-6)
-                    const saskDate = new Date(utcDate.getTime() - (6 * 60 * 60 * 1000));
-                    const saskHour = saskDate.getUTCHours();
-                    const saskMinute = saskDate.getUTCMinutes();
+                    const utcDate = new Date(item.timestamp);
+                    // Direct UTC-6 conversion for Saskatchewan time
+                    const saskHour = (utcDate.getUTCHours() - 6 + 24) % 24;
+                    const saskMinute = utcDate.getUTCMinutes();
                     
                     return `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
                 });
@@ -650,141 +619,4 @@ function getFullHospitalName(code) {
         'SCH': 'Saskatoon City Hospital'
     };
     return nameMap[code] || code;
-}
-
-async function createSnapshot() {
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i data-feather="loader" class="me-1"></i> Creating...';
-    button.disabled = true;
-    
-    try {
-        const response = await fetch('/api/snapshots/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-            showSnapshotCreated(result);
-        } else {
-            alert(`Error creating snapshot: ${result.error}`);
-        }
-    } catch (error) {
-        console.error('Error creating snapshot:', error);
-        alert('Failed to create snapshot');
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
-        feather.replace();
-    }
-}
-
-function showSnapshotCreated(snapshotData) {
-    const modal = document.createElement('div');
-    modal.className = 'modal fade';
-    modal.id = 'snapshotModal';
-    modal.innerHTML = `
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i data-feather="camera" class="me-2"></i>
-                        Snapshot Created Successfully
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-success">
-                        <strong>Shareable Link Created!</strong><br>
-                        Your hospital status snapshot has been saved and can be shared with others.
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Snapshot URL:</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" value="${window.location.origin}${snapshotData.snapshot_url}" readonly id="snapshotUrl">
-                            <button class="btn btn-outline-primary" onclick="copySnapshotUrl()">
-                                <i data-feather="copy"></i> Copy
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="row text-center">
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <strong>${snapshotData.data.hospitals[0].total_patients}</strong>
-                                <div class="small text-muted">RUH</div>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <strong>${snapshotData.data.hospitals[1].total_patients}</strong>
-                                <div class="small text-muted">SPH</div>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <strong>${snapshotData.data.hospitals[2].total_patients}</strong>
-                                <div class="small text-muted">SCH</div>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <strong>${snapshotData.data.hospitals[3].total_patients}</strong>
-                                <div class="small text-muted">JPCH</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center mt-3">
-                        <small class="text-muted">
-                            Captured: ${snapshotData.data.formatted_time}<br>
-                            Total ED Patients: ${snapshotData.data.total_ed_patients}
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <a href="${snapshotData.snapshot_url}" target="_blank" class="btn btn-primary">
-                        <i data-feather="external-link" class="me-1"></i> View Snapshot
-                    </a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    const bootstrapModal = new bootstrap.Modal(modal);
-    bootstrapModal.show();
-    
-    modal.addEventListener('hidden.bs.modal', () => {
-        modal.remove();
-    });
-    
-    feather.replace();
-}
-
-function copySnapshotUrl() {
-    const urlInput = document.getElementById('snapshotUrl');
-    urlInput.select();
-    navigator.clipboard.writeText(urlInput.value).then(() => {
-        const button = event.target;
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i data-feather="check"></i> Copied!';
-        button.classList.remove('btn-outline-primary');
-        button.classList.add('btn-success');
-        
-        setTimeout(() => {
-            button.innerHTML = originalText;
-            button.classList.remove('btn-success');
-            button.classList.add('btn-outline-primary');
-            feather.replace();
-        }, 2000);
-    }).catch(() => {
-        alert('Failed to copy URL. Please copy manually.');
-    });
 }

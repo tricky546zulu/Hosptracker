@@ -2,82 +2,40 @@
 
 {% block content %}
 <!-- Header Section -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="bg-gradient-primary rounded-4 text-white p-4 shadow">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h2 mb-2 fw-bold">
-                        <i data-feather="activity" class="me-3"></i>
-                        Emergency Department Status
-                    </h1>
-                    <p class="mb-0 opacity-90">
-                        Real-time patient capacity monitoring for Saskatoon hospitals
-                        <a href="https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf" target="_blank" class="text-white ms-2">
-                            <i data-feather="external-link" style="width: 16px; height: 16px;"></i>
-                        </a>
-                    </p>
-                    <small class="opacity-75">
-                        <i data-feather="check-circle" class="me-1"></i>
-                        Official data from eHealth Saskatchewan
-                    </small>
-                </div>
-                <div class="d-flex flex-column align-items-end gap-2">
-                    <div class="d-flex gap-2">
-                        <button id="refresh-btn" class="btn btn-light btn-sm" onclick="refreshData()">
-                            <i data-feather="refresh-cw" class="me-1"></i>
-                            Refresh
-                        </button>
-                        <button class="btn btn-outline-light btn-sm" onclick="createSnapshot()">
-                            <i data-feather="share-2" class="me-1"></i>
-                            Share
-                        </button>
-                    </div>
-                    <div id="connection-status" class="badge bg-light text-dark">
-                        <i data-feather="wifi" class="me-1"></i>
-                        Live Data
-                    </div>
-                </div>
-            </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i data-feather="activity" class="me-2"></i>
+            Saskatchewan Hospital Emergency Department Monitor
+        </h1>
+        <p class="text-muted mb-0">
+            Live patient counts extracted from official eHealth Saskatchewan PDF reports
+            <a href="https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf" target="_blank" class="ms-2">
+                <i data-feather="external-link" style="width: 14px; height: 14px;"></i>
+            </a>
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button id="refresh-btn" class="btn btn-outline-primary" onclick="refreshData()">
+            <i data-feather="refresh-cw" class="me-1"></i>
+            Refresh
+        </button>
+        <div id="connection-status" class="badge bg-success">
+            <i data-feather="wifi" class="me-1"></i>
+            Connected
         </div>
     </div>
 </div>
 
-<!-- Quick Stats Overview -->
-<div class="row mb-4 quick-stats">
-    <div class="col-md-3">
-        <div class="card border-0 bg-light h-100">
-            <div class="card-body text-center">
-                <i data-feather="users" class="text-primary mb-2" style="width: 24px; height: 24px;"></i>
-                <h3 class="h4 mb-1" id="total-patients">-</h3>
-                <small class="text-muted">Total ED Patients</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 bg-light h-100">
-            <div class="card-body text-center">
-                <i data-feather="map-pin" class="text-info mb-2" style="width: 24px; height: 24px;"></i>
-                <h3 class="h4 mb-1">4</h3>
-                <small class="text-muted">Hospitals Monitored</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 bg-light h-100">
-            <div class="card-body text-center">
-                <i data-feather="clock" class="text-warning mb-2" style="width: 24px; height: 24px;"></i>
-                <h3 class="h4 mb-1" id="last-update-mins">-</h3>
-                <small class="text-muted">Minutes Since Update</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-0 bg-light h-100">
-            <div class="card-body text-center">
-                <i data-feather="activity" class="text-success mb-2" style="width: 24px; height: 24px;"></i>
-                <h3 class="h4 mb-1">Live</h3>
-                <small class="text-muted">Data Status</small>
+<!-- Data Source Information -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div id="data-status-alert" class="alert alert-info d-flex align-items-center" role="alert">
+            <i data-feather="info" class="me-2"></i>
+            <div>
+                <strong>Data Source:</strong> Automated extraction from eHealth Saskatchewan PDF reports. 
+                Shows total patients currently in Emergency Departments.
+                <span id="update-frequency">Updates every 30-60 minutes when new reports are published.</span>
             </div>
         </div>
     </div>
