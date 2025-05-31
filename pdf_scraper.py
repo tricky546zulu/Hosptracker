@@ -17,23 +17,21 @@ class HospitalDataScraper:
         
         # Configuration for precise table extraction
         self.extraction_config = {
-            'method': 'camelot',
             'column_mapping': {
-                # Map hospital codes to which column index to use for patient count
-                'RUH': -1,    # Use last column (Total)
-                'SPH': -1,    # Use last column (Total)  
-                'SCH': -1,    # Use last column (Total)
-                'JPCH': -1    # Use last column (Total)
+                # Use last column (Total) for all hospitals
+                'RUH': -1,    
+                'SPH': -1,     
+                'SCH': -1,    
+                'JPCH': -1    
             },
             'table_filters': {
                 'min_accuracy': 90.0,
-                'required_keywords': ['Emergency Department', 'Site', 'Total'],
                 'hospital_codes': ['RUH', 'SPH', 'SCH', 'JPCH']
             }
         }
         
     def scrape_hospital_data(self):
-        """Main method to scrape hospital data from PDF using table extraction"""
+        """Main method to scrape hospital data using table extraction"""
         try:
             logging.info("Starting hospital data scraping with table extraction")
             
@@ -44,12 +42,12 @@ class HospitalDataScraper:
                 return False
             
             # Parse PDF using table extraction
-            hospital_data = self._parse_pdf_with_tables(pdf_content)
+            hospital_data = self._extract_tables(pdf_content)
             if not hospital_data:
                 self._log_scraping_result("error", "No hospital data found in PDF")
                 return False
             
-            # AI-powered data validation and cleanup
+            # AI-powered data validation
             validated_data = self._ai_validate_and_clean_data(hospital_data)
             
             # Save to database
@@ -83,30 +81,17 @@ class HospitalDataScraper:
             logging.error(f"Failed to download PDF: {e}")
             return None
     
-    def _parse_pdf_with_tables(self, pdf_content):
-        """Parse PDF using Camelot table extraction"""
+    def _extract_tables(self, pdf_content):
+        """Extract Emergency Department data using table extraction"""
         try:
-            # Save PDF temporarily for Camelot processing
+            # Save PDF temporarily
             temp_pdf_path = '/tmp/hospital_capacity.pdf'
             with open(temp_pdf_path, 'wb') as f:
                 f.write(pdf_content)
             
-            # Extract tables using Camelot
-            hospital_data = self._extract_with_camelot(temp_pdf_path)
+            # Extract all tables
+            tables = camelot.read_pdf(temp_pdf_path, pages='all', flavor='lattice')
             
-            return hospital_data
-            
-        except Exception as e:
-            logging.error(f"Error parsing PDF with tables: {e}")
-            return None
-    
-    def _extract_with_camelot(self, pdf_path):
-        """Extract Emergency Department data using Camelot table extraction"""
-        try:
-            # Extract all tables from PDF
-            tables = camelot.read_pdf(pdf_path, pages='all', flavor='lattice')
-            
-            hospital_data = []
             best_table = None
             max_hospitals_found = 0
             
@@ -117,44 +102,40 @@ class HospitalDataScraper:
                 
                 df = table.df
                 
-                # Check if this is an Emergency Department table
-                if self._is_ed_table(df):
-                    logging.info(f"Found potential Emergency Department table {i+1} with {table.accuracy:.1f}% accuracy")
+                # Check if this is the main Emergency Department table
+                if self._is_main_ed_table(df):
+                    logging.info(f"Found Emergency Department table {i+1} with {table.accuracy:.1f}% accuracy")
                     
-                    # Extract hospital data from this table
+                    # Extract hospital data
                     ed_data = self._extract_ed_data_from_table(df)
-                    if ed_data:
-                        # Prefer tables that have more hospitals (main ED table should have all 4)
-                        if len(ed_data) > max_hospitals_found:
-                            max_hospitals_found = len(ed_data)
-                            best_table = ed_data
-                            logging.info(f"Table {i+1} has {len(ed_data)} hospitals - new best candidate")
+                    if ed_data and len(ed_data) > max_hospitals_found:
+                        max_hospitals_found = len(ed_data)
+                        best_table = ed_data
+                        logging.info(f"Table {i+1} has {len(ed_data)} hospitals - best candidate")
             
             return best_table if best_table else []
             
         except Exception as e:
-            logging.error(f"Camelot extraction error: {e}")
+            logging.error(f"Table extraction error: {e}")
             return []
     
-    def _is_ed_table(self, df):
-        """Check if this table contains the main Emergency Department totals (not specialty departments)"""
+    def _is_main_ed_table(self, df):
+        """Check if this is the main Emergency Department table"""
         try:
-            # Convert to string to search
             table_str = df.to_string().upper()
             
             # Check for hospital codes
             hospital_codes = self.extraction_config['table_filters']['hospital_codes']
             has_hospitals = any(code in table_str for code in hospital_codes)
             
-            # Make sure it's NOT a specialty department table
+            # Exclude specialty department tables
             specialty_indicators = ['CARDIOSCIENCES', 'MEDICINE ED', 'ONCOLOGY', 'NEUROSCIENCES']
             is_specialty_table = any(specialty in table_str for specialty in specialty_indicators)
             
-            # Look for main ED table indicators - should have column headers like Admitted, Active, Consults, Total
+            # Look for main ED structure
             main_ed_indicators = ['ADMITTED', 'ACTIVE', 'CONSULTS', 'TOTAL']
             has_main_ed_structure = all(indicator in table_str for indicator in main_ed_indicators)
             
-            # This should be a main ED table: has hospitals, has proper structure, NOT specialty departments
             return has_hospitals and has_main_ed_structure and not is_specialty_table
             
         except Exception as e:
@@ -162,15 +143,13 @@ class HospitalDataScraper:
             return False
     
     def _extract_ed_data_from_table(self, df):
-        """Extract specific hospital data from Emergency Department table"""
+        """Extract hospital data from Emergency Department table"""
         try:
             hospital_data = []
             
-            # Look for hospital rows
             for idx, row in df.iterrows():
                 row_str = ' '.join(str(cell) for cell in row.values if pd.notna(cell))
                 
-                # Check for each hospital
                 for hospital_code in self.extraction_config['table_filters']['hospital_codes']:
                     if hospital_code in row_str:
                         logging.info(f"Found {hospital_code} in table row: {row_str}")
@@ -199,7 +178,7 @@ class HospitalDataScraper:
                                 logging.info(f"Successfully extracted data for {hospital_code}: {hospital_info}")
                                 hospital_data.append(hospital_info)
                         
-                        break  # Found this hospital, move to next row
+                        break
             
             return hospital_data
             
@@ -229,24 +208,23 @@ class HospitalDataScraper:
                 logging.warning("AI validation failed for scraped data")
                 return []
             
-            # Apply consistency rules and remove obvious anomalies
+            # Apply consistency rules
             validated_data = []
             
             for data in hospital_data:
                 hospital_code = data['hospital_code']
                 patient_count = data['total_patients']
                 
-                # Hospital-specific validation ranges based on observed data
+                # Hospital-specific validation ranges
                 expected_ranges = {
-                    'RUH': (20, 150),     # Large hospital
-                    'SPH': (2, 25),       # Confirmed range by user
-                    'SCH': (1, 70),       # Can be as low as 1 at times
-                    'JPCH': (5, 40)       # Children's hospital
+                    'RUH': (20, 150),
+                    'SPH': (2, 25),
+                    'SCH': (1, 70),
+                    'JPCH': (5, 40)
                 }
                 
                 min_expected, max_expected = expected_ranges.get(hospital_code, (5, 200))
                 
-                # Check if value is within reasonable range
                 if min_expected <= patient_count <= max_expected:
                     validated_data.append(data)
                     logging.info(f"AI validation passed for {hospital_code}: {patient_count} patients")
@@ -257,7 +235,6 @@ class HospitalDataScraper:
             
         except Exception as e:
             logging.error(f"Error in AI validation: {e}")
-            # Return original data if AI validation fails
             return hospital_data
     
     def _clean_existing_anomalous_data(self):
@@ -268,11 +245,7 @@ class HospitalDataScraper:
             from datetime import datetime, timedelta
             import pytz
             
-            # Define Saskatchewan timezone
-            sask_tz = pytz.timezone('America/Regina')
             utc_now = datetime.utcnow()
-            
-            # Look at data from the last 24 hours
             cutoff_time = utc_now - timedelta(hours=24)
             
             # Hospital-specific anomaly detection ranges
@@ -301,7 +274,7 @@ class HospitalDataScraper:
                     db.session.delete(record)
                     removed_count += 1
             
-            # Also detect sudden jumps/drops in recent data
+            # Detect sudden jumps/drops
             for hospital_code in ['RUH', 'SPH', 'SCH', 'JPCH']:
                 recent_records = HospitalCapacity.query.filter(
                     HospitalCapacity.hospital_code == hospital_code,
@@ -313,10 +286,9 @@ class HospitalDataScraper:
                         current = recent_records[i].total_patients
                         previous = recent_records[i + 1].total_patients
                         
-                        if previous > 0:  # Avoid division by zero
+                        if previous > 0:
                             change_percent = abs(current - previous) / previous
                             
-                            # Remove records with >60% sudden changes
                             if change_percent > 0.6:
                                 logging.info(f"Removing sudden change anomaly: {hospital_code} jumped from {previous} to {current} patients ({change_percent:.1%} change)")
                                 db.session.delete(recent_records[i])
