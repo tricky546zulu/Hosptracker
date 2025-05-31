@@ -107,6 +107,8 @@ class HospitalDataScraper:
             tables = camelot.read_pdf(pdf_path, pages='all', flavor='lattice')
             
             hospital_data = []
+            best_table = None
+            max_hospitals_found = 0
             
             for i, table in enumerate(tables):
                 # Check table quality
@@ -117,35 +119,43 @@ class HospitalDataScraper:
                 
                 # Check if this is an Emergency Department table
                 if self._is_ed_table(df):
-                    logging.info(f"Found Emergency Department table {i+1} with {table.accuracy:.1f}% accuracy")
+                    logging.info(f"Found potential Emergency Department table {i+1} with {table.accuracy:.1f}% accuracy")
                     
                     # Extract hospital data from this table
                     ed_data = self._extract_ed_data_from_table(df)
                     if ed_data:
-                        hospital_data.extend(ed_data)
-                        break  # Found the ED table, no need to continue
+                        # Prefer tables that have more hospitals (main ED table should have all 4)
+                        if len(ed_data) > max_hospitals_found:
+                            max_hospitals_found = len(ed_data)
+                            best_table = ed_data
+                            logging.info(f"Table {i+1} has {len(ed_data)} hospitals - new best candidate")
             
-            return hospital_data
+            return best_table if best_table else []
             
         except Exception as e:
             logging.error(f"Camelot extraction error: {e}")
             return []
     
     def _is_ed_table(self, df):
-        """Check if this table contains Emergency Department data"""
+        """Check if this table contains the main Emergency Department totals (not specialty departments)"""
         try:
             # Convert to string to search
             table_str = df.to_string().upper()
-            
-            # Check for required keywords
-            required_keywords = self.extraction_config['table_filters']['required_keywords']
-            has_keywords = any(keyword.upper() in table_str for keyword in required_keywords)
             
             # Check for hospital codes
             hospital_codes = self.extraction_config['table_filters']['hospital_codes']
             has_hospitals = any(code in table_str for code in hospital_codes)
             
-            return has_keywords and has_hospitals
+            # Make sure it's NOT a specialty department table
+            specialty_indicators = ['CARDIOSCIENCES', 'MEDICINE ED', 'ONCOLOGY', 'NEUROSCIENCES']
+            is_specialty_table = any(specialty in table_str for specialty in specialty_indicators)
+            
+            # Look for main ED table indicators - should have column headers like Admitted, Active, Consults, Total
+            main_ed_indicators = ['ADMITTED', 'ACTIVE', 'CONSULTS', 'TOTAL']
+            has_main_ed_structure = all(indicator in table_str for indicator in main_ed_indicators)
+            
+            # This should be a main ED table: has hospitals, has proper structure, NOT specialty departments
+            return has_hospitals and has_main_ed_structure and not is_specialty_table
             
         except Exception as e:
             logging.error(f"Error checking ED table: {e}")
@@ -368,5 +378,8 @@ class HospitalDataScraper:
 
 def run_scraping():
     """Function to run scraping - called by scheduler"""
-    scraper = HospitalDataScraper()
-    return scraper.scrape_hospital_data()
+    from app import app
+    
+    with app.app_context():
+        scraper = HospitalDataScraper()
+        return scraper.scrape_hospital_data()
