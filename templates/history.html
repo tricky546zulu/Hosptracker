@@ -155,59 +155,22 @@ function initializeHistoricalChart() {
                     title: {
                         display: true,
                         text: 'Emergency Department Patients'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
                 x: {
-                    type: 'time',
-                    time: {
-                        displayFormats: {
-                            hour: 'MMM DD HH:mm',
-                            day: 'MMM DD'
-                        },
-                        tooltipFormat: 'MMM DD, YYYY HH:mm'
-                    },
                     title: {
                         display: true,
-                        text: 'Date/Time (Saskatchewan Time)'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
+                        text: 'Time Period'
                     }
                 }
             },
             plugins: {
                 legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20
-                    }
+                    position: 'top'
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: 'white',
-                    bodyColor: 'white',
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 1
-                }
-            },
-            interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
-            },
-            elements: {
-                line: {
-                    tension: 0.2
-                },
-                point: {
-                    radius: 3,
-                    hoverRadius: 6
+                    intersect: false
                 }
             }
         }
@@ -229,6 +192,8 @@ function loadHistoricalData() {
         const datasets = [];
         const allData = {};
         
+        const allLabels = new Set();
+        
         results.forEach((result, index) => {
             const hospital = hospitals[index];
             if (result.success && result.data.length > 0) {
@@ -237,28 +202,23 @@ function loadHistoricalData() {
                 
                 allData[hospital] = sortedData;
                 
-                // Convert to Saskatchewan time for display
-                const saskData = sortedData.map(item => {
+                // Create simple labels and data points
+                const dataPoints = sortedData.map(item => {
                     const utcTime = new Date(item.timestamp);
                     const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    return {
-                        x: saskTime,
-                        y: item.total_patients
-                    };
+                    const label = saskTime.toLocaleDateString() + ' ' + saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit'});
+                    allLabels.add(label);
+                    return item.total_patients;
                 });
 
                 datasets.push({
                     label: hospital,
-                    data: saskData,
+                    data: dataPoints,
                     borderColor: colors[hospital],
                     backgroundColor: colors[hospital] + '20',
                     borderWidth: 2,
                     fill: false,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: colors[hospital],
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2
+                    tension: 0.1
                 });
                 
                 // Update individual hospital table
@@ -266,7 +226,15 @@ function loadHistoricalData() {
             }
         });
         
-        // Update chart
+        // Update chart with simple labels
+        const sortedLabels = Array.from(allLabels).sort();
+        historicalChart.data.labels = sortedLabels.slice(-20); // Show last 20 data points
+        
+        // Adjust datasets to match label length
+        datasets.forEach(dataset => {
+            dataset.data = dataset.data.slice(-20);
+        });
+        
         historicalChart.data.datasets = datasets;
         historicalChart.update();
         
