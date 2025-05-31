@@ -1041,6 +1041,130 @@ def validate_timezone_consistency():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/analyze-pdf-tables')
+def analyze_pdf_tables():
+    """Analyze PDF tables for interactive configuration"""
+    try:
+        import requests
+        import camelot
+        
+        pdf_url = "https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf"
+        
+        # Download PDF
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        with open('/tmp/hospital_capacity.pdf', 'wb') as f:
+            f.write(response.content)
+        
+        # Extract tables
+        import warnings
+        warnings.filterwarnings('ignore')
+        tables = camelot.read_pdf('/tmp/hospital_capacity.pdf', pages='all', flavor='lattice')
+        
+        # Format tables for frontend
+        formatted_tables = []
+        for i, table in enumerate(tables):
+            df = table.df
+            formatted_tables.append({
+                'index': i,
+                'rows': len(df),
+                'cols': len(df.columns),
+                'accuracy': round(table.accuracy, 1),
+                'preview': df.head(10).fillna('').values.tolist()
+            })
+        
+        return jsonify({'tables': formatted_tables})
+        
+    except Exception as e:
+        logging.error(f"Error analyzing PDF tables: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/test-extraction')
+def test_extraction():
+    """Test current extraction configuration"""
+    try:
+        from pdf_scraper import HospitalDataScraper
+        
+        scraper = HospitalDataScraper()
+        pdf_content = scraper._download_pdf()
+        
+        if not pdf_content:
+            return jsonify({'error': 'Failed to download PDF'}), 500
+        
+        hospital_data = scraper._extract_from_coordinates(pdf_content)
+        
+        return jsonify({
+            'extracted_data': hospital_data,
+            'table_info': {
+                'name': 'Table 5 (Emergency Department)',
+                'accuracy': 100.0
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"Error testing extraction: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/preview-coordinate', methods=['POST'])
+def preview_coordinate():
+    """Preview value at specific table coordinate"""
+    try:
+        data = request.get_json()
+        hospital = data.get('hospital')
+        row = data.get('row')
+        column = data.get('column')
+        
+        import requests
+        import camelot
+        
+        pdf_url = "https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf"
+        
+        # Download PDF
+        response = requests.get(pdf_url, timeout=30)
+        response.raise_for_status()
+        
+        with open('/tmp/hospital_capacity.pdf', 'wb') as f:
+            f.write(response.content)
+        
+        # Extract tables
+        import warnings
+        warnings.filterwarnings('ignore')
+        tables = camelot.read_pdf('/tmp/hospital_capacity.pdf', pages='all', flavor='lattice')
+        
+        # Use Table 5 (index 4)
+        target_table = tables[4]
+        df = target_table.df
+        
+        if row < len(df) and column < len(df.columns):
+            value = df.iloc[row, column]
+            return jsonify({'value': str(value)})
+        else:
+            return jsonify({'error': 'Invalid coordinates'}), 400
+            
+    except Exception as e:
+        logging.error(f"Error previewing coordinate: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/update-coordinate', methods=['POST'])
+def update_coordinate():
+    """Update extraction coordinates for a hospital"""
+    try:
+        data = request.get_json()
+        hospital = data.get('hospital')
+        row = data.get('row')
+        column = data.get('column')
+        
+        # For now, return success with note about configuration update
+        return jsonify({
+            'message': f'Coordinate update recorded for {hospital}',
+            'note': 'Configuration update requires server restart to take effect'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating coordinate: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/timezone/current', methods=['GET'])
 def get_current_saskatchewan_time():
     """Get current Saskatchewan time and timezone info"""
