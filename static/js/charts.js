@@ -93,6 +93,26 @@ function updateHospitalCards() {
             updateHospitalCard(hospital, null);
         }
     });
+    
+    // Update stats overview
+    updateStatsOverview(totalPatients, latestTimestamp);
+}
+
+// Update the stats overview section
+function updateStatsOverview(totalPatients, latestTimestamp) {
+    // Update total patients
+    const totalElement = document.getElementById('total-patients');
+    if (totalElement) {
+        totalElement.textContent = totalPatients;
+    }
+    
+    // Update minutes since last update
+    const lastUpdateElement = document.getElementById('last-update-mins');
+    if (lastUpdateElement && latestTimestamp) {
+        const now = new Date();
+        const diffMinutes = Math.floor((now - latestTimestamp) / (1000 * 60));
+        lastUpdateElement.textContent = diffMinutes;
+    }
 }
 
 // Update individual hospital card
