@@ -21,8 +21,7 @@ class HospitalDataScraper:
             logging.info("Starting hospital data scraping with Camelot")
             
             # Download and extract tables using Camelot
-            tables = camelot.read_pdf(self.pdf_url, pages='all', flavor='lattice', 
-                                    table_areas=None, columns=None)
+            tables = camelot.read_pdf(self.pdf_url, pages='all', flavor='lattice')
             
             if not tables:
                 raise Exception("No tables found in PDF")
@@ -147,5 +146,7 @@ class HospitalDataScraper:
 
 def run_scraping():
     """Function to run scraping - called by scheduler"""
-    scraper = HospitalDataScraper()
-    return scraper.scrape_hospital_data()
+    from app import app
+    with app.app_context():
+        scraper = HospitalDataScraper()
+        return scraper.scrape_hospital_data()

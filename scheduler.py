@@ -22,9 +22,11 @@ def start_scheduler():
         )
         
         # Run initial scraping after 10 seconds
+        from datetime import datetime, timedelta
         scheduler.add_job(
             func=run_scraping,
             trigger='date',
+            run_date=datetime.now() + timedelta(seconds=10),
             id='initial_scraping',
             name='Initial Hospital Data Scraping'
         )
