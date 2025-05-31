@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Historical Data - Saskatoon Hospital Capacity{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="display-6">Historical Data</h1>
+        <p class="text-muted">7-day view of Emergency Department patient counts</p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary">
+        <i data-feather="arrow-left" class="me-2"></i>
+        Back to Dashboard
+    </a>
+</div>
+
+<!-- Historical Chart -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="trending-up" class="me-2"></i>
+                <h5 class="mb-0">7-Day Patient Count Trends</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="historicalChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historical Data Tables -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="activity" class="me-2"></i>
+                <h5 class="mb-0">RUH - Royal University Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div id="ruh-history" class="table-responsive">
+                    <p class="text-muted">Loading historical data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="activity" class="me-2"></i>
+                <h5 class="mb-0">SPH - St. Paul's Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div id="sph-history" class="table-responsive">
+                    <p class="text-muted">Loading historical data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="activity" class="me-2"></i>
+                <h5 class="mb-0">SCH - Saskatoon City Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div id="sch-history" class="table-responsive">
+                    <p class="text-muted">Loading historical data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="activity" class="me-2"></i>
+                <h5 class="mb-0">JPCH - Jim Pattison Children's Hospital</h5>
+            </div>
+            <div class="card-body">
+                <div id="jpch-history" class="table-responsive">
+                    <p class="text-muted">Loading historical data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="row g-4 mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="bar-chart-2" class="me-2"></i>
+                <h5 class="mb-0">Weekly Summary Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div id="summary-stats" class="row g-3">
+                    <p class="text-muted">Loading summary statistics...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let historicalChart = null;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeHistoricalChart();
+    loadHistoricalData();
+    
+    // Auto-refresh every 10 minutes
+    setInterval(() => {
+        loadHistoricalData();
+    }, 10 * 60 * 1000);
+});
+
+function initializeHistoricalChart() {
+    const ctx = document.getElementById('historicalChart').getContext('2d');
+    historicalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Patients'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date/Time (Saskatchewan Time)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+function loadHistoricalData() {
+    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
+    const colors = {
+        'RUH': '#FF6384',
+        'SPH': '#36A2EB', 
+        'SCH': '#FFCE56',
+        'JPCH': '#4BC0C0'
+    };
+    
+    Promise.all(hospitals.map(code => 
+        fetch(`/api/hospital-history/${code}?days=7`).then(r => r.json())
+    )).then(results => {
+        const datasets = [];
+        const allData = {};
+        
+        results.forEach((result, index) => {
+            const hospital = hospitals[index];
+            if (result.success && result.data.length > 0) {
+                // Sort data by timestamp
+                const sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                allData[hospital] = sortedData;
+                
+                datasets.push({
+                    label: hospital,
+                    data: sortedData.map(item => ({
+                        x: new Date(item.timestamp),
+                        y: item.total_patients
+                    })),
+                    borderColor: colors[hospital],
+                    backgroundColor: colors[hospital] + '20',
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                });
+                
+                // Update individual hospital table
+                updateHospitalTable(hospital.toLowerCase(), sortedData);
+            }
+        });
+        
+        // Update chart
+        historicalChart.data.datasets = datasets;
+        historicalChart.update();
+        
+        // Update summary statistics
+        updateSummaryStats(allData);
+    }).catch(error => {
+        console.error('Error loading historical data:', error);
+    });
+}
+
+function updateHospitalTable(hospitalCode, data) {
+    const container = document.getElementById(`${hospitalCode}-history`);
+    
+    if (data.length === 0) {
+        container.innerHTML = '<p class="text-muted">No historical data available</p>';
+        return;
+    }
+    
+    let tableHTML = `
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Patients</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    data.slice(-10).reverse().forEach((item, index, arr) => {
+        const timestamp = new Date(item.timestamp);
+        const saskTime = new Date(timestamp.getTime() - (6 * 60 * 60 * 1000));
+        
+        let change = '';
+        let changeClass = '';
+        if (index < arr.length - 1) {
+            const prevCount = arr[index + 1].total_patients;
+            const diff = item.total_patients - prevCount;
+            if (diff > 0) {
+                change = `+${diff}`;
+                changeClass = 'text-danger';
+            } else if (diff < 0) {
+                change = `${diff}`;
+                changeClass = 'text-success';
+            } else {
+                change = '0';
+                changeClass = 'text-muted';
+            }
+        }
+        
+        tableHTML += `
+            <tr>
+                <td><small>${saskTime.toLocaleString('en-CA', {timeZone: 'America/Regina'})}</small></td>
+                <td><strong>${item.total_patients}</strong></td>
+                <td><small class="${changeClass}">${change}</small></td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+}
+
+function updateSummaryStats(allData) {
+    const container = document.getElementById('summary-stats');
+    let statsHTML = '';
+    
+    Object.keys(allData).forEach(hospital => {
+        const data = allData[hospital];
+        if (data.length === 0) return;
+        
+        const counts = data.map(item => item.total_patients);
+        const current = counts[counts.length - 1];
+        const max = Math.max(...counts);
+        const min = Math.min(...counts);
+        const avg = Math.round(counts.reduce((a, b) => a + b, 0) / counts.length);
+        
+        statsHTML += `
+            <div class="col-md-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="card-title">${hospital}</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted">Current</small>
+                                <div class="fw-bold">${current}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Average</small>
+                                <div class="fw-bold">${avg}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Peak</small>
+                                <div class="fw-bold text-danger">${max}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Low</small>
+                                <div class="fw-bold text-success">${min}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = statsHTML;
+}
+</script>
+{% endblock %}

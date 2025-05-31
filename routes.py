@@ -1,4 +1,4 @@
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from datetime import datetime, timedelta
 from app import app, db
 from models import HospitalCapacity, ScrapingLog
@@ -7,6 +7,11 @@ from models import HospitalCapacity, ScrapingLog
 def index():
     """Main dashboard page"""
     return render_template('index.html')
+
+@app.route('/history')
+def history():
+    """Historical data page"""
+    return render_template('history.html')
 
 @app.route('/api/hospital-data')
 def get_hospital_data():
@@ -39,13 +44,14 @@ def get_hospital_data():
 def get_hospital_history(hospital_code):
     """Get historical data for a specific hospital"""
     try:
-        # Get last 24 hours of data
-        since = datetime.utcnow() - timedelta(hours=24)
+        # Get days parameter, default to 1 day (24 hours)
+        days = request.args.get('days', 1, type=int)
+        since = datetime.utcnow() - timedelta(days=days)
         
         records = HospitalCapacity.query.filter(
             HospitalCapacity.hospital_code == hospital_code,
             HospitalCapacity.timestamp >= since
-        ).order_by(HospitalCapacity.timestamp.desc()).limit(50).all()
+        ).order_by(HospitalCapacity.timestamp.desc()).all()
         
         data = []
         for record in records:
