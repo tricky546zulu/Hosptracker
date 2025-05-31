@@ -164,12 +164,21 @@ function loadScrapingStatus() {
     fetch('/api/scraping-status')
         .then(response => response.json())
         .then(data => {
+            console.log('Status data received:', data);
             if (data.success) {
                 updateStatusDisplay(data);
+            } else {
+                console.error('Status request failed:', data);
             }
         })
         .catch(error => {
             console.error('Error loading status:', error);
+            // Show error status
+            updateStatusDisplay({
+                status: 'error',
+                message: 'Unable to connect to server',
+                timestamp: null
+            });
         });
 }
 

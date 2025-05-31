@@ -75,16 +75,14 @@ def get_scraping_status():
                 'success': True,
                 'status': latest_log.status,
                 'message': latest_log.message,
-                'timestamp': latest_log.timestamp.isoformat(),
-                'hospitals_processed': latest_log.hospitals_processed
+                'timestamp': latest_log.timestamp.isoformat()
             })
         else:
             return jsonify({
                 'success': True,
                 'status': 'no_data',
                 'message': 'No scraping logs available',
-                'timestamp': None,
-                'hospitals_processed': 0
+                'timestamp': None
             })
             
     except Exception as e:
