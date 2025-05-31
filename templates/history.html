@@ -155,22 +155,49 @@ function initializeHistoricalChart() {
                     title: {
                         display: true,
                         text: 'Emergency Department Patients'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
                 x: {
                     title: {
                         display: true,
-                        text: 'Time Period'
+                        text: 'Date & Time (Saskatchewan)'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        maxTicksLimit: 8
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             },
             plugins: {
                 legend: {
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
                 },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white'
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.2
+                },
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
                 }
             }
         }
@@ -203,12 +230,26 @@ function loadHistoricalData() {
                 allData[hospital] = sortedData;
                 
                 // Create simple labels and data points
-                const dataPoints = sortedData.map(item => {
+                const dataPoints = [];
+                const labels = [];
+                
+                sortedData.forEach(item => {
                     const utcTime = new Date(item.timestamp);
                     const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    const label = saskTime.toLocaleDateString() + ' ' + saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit'});
-                    allLabels.add(label);
-                    return item.total_patients;
+                    const dateLabel = saskTime.toLocaleDateString('en-CA', {
+                        month: 'short', 
+                        day: 'numeric'
+                    });
+                    const timeLabel = saskTime.toLocaleTimeString('en-CA', {
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    const fullLabel = `${dateLabel} ${timeLabel}`;
+                    
+                    labels.push(fullLabel);
+                    dataPoints.push(item.total_patients);
+                    allLabels.add(fullLabel);
                 });
 
                 datasets.push({
@@ -226,14 +267,37 @@ function loadHistoricalData() {
             }
         });
         
-        // Update chart with simple labels
-        const sortedLabels = Array.from(allLabels).sort();
-        historicalChart.data.labels = sortedLabels.slice(-20); // Show last 20 data points
-        
-        // Adjust datasets to match label length
-        datasets.forEach(dataset => {
-            dataset.data = dataset.data.slice(-20);
+        // Create a unified timeline from all data points
+        const allTimestamps = [];
+        Object.values(allData).forEach(hospitalData => {
+            hospitalData.forEach(item => {
+                const utcTime = new Date(item.timestamp);
+                const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
+                allTimestamps.push(saskTime);
+            });
         });
+        
+        // Sort and get unique timestamps
+        const uniqueTimestamps = [...new Set(allTimestamps.map(t => t.getTime()))]
+            .sort()
+            .map(time => new Date(time))
+            .slice(-24); // Show last 24 data points
+        
+        // Create labels for the chart
+        const chartLabels = uniqueTimestamps.map(timestamp => {
+            const dateLabel = timestamp.toLocaleDateString('en-CA', {
+                month: 'short', 
+                day: 'numeric'
+            });
+            const timeLabel = timestamp.toLocaleTimeString('en-CA', {
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+            });
+            return `${dateLabel} ${timeLabel}`;
+        });
+        
+        historicalChart.data.labels = chartLabels;
         
         historicalChart.data.datasets = datasets;
         historicalChart.update();
