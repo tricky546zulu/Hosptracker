@@ -170,7 +170,20 @@ function updateHospitalCards(hospitals) {
         const timeElement = document.getElementById(`${code}-time`);
         
         if (patientsElement) {
-            patientsElement.textContent = hospital.total_patients || '-';
+            const totalPatients = hospital.total_patients || '-';
+            const admittedInED = hospital.admitted_patients_in_ed;
+            
+            // Display total patients with admitted breakdown if available
+            if (admittedInED !== null && admittedInED !== undefined) {
+                patientsElement.innerHTML = `
+                    <div class="fs-1 fw-bold text-primary">${totalPatients}</div>
+                    <div class="mt-1">
+                        <small class="badge bg-warning text-dark">${admittedInED} Admitted in ED</small>
+                    </div>
+                `;
+            } else {
+                patientsElement.innerHTML = `<div class="fs-1 fw-bold text-primary">${totalPatients}</div>`;
+            }
         }
         
         if (timeElement) {

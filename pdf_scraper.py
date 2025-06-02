@@ -87,6 +87,7 @@ class HospitalDataScraper:
                     
                     if patient_count is not None:
                         admitted_count = self._extract_admitted_patients_count(row)
+                        logging.info(f"Found {code}: {patient_count} total patients, {admitted_count} admitted in ED")
                         return {
                             'hospital_code': code,
                             'hospital_name': name,
@@ -100,7 +101,7 @@ class HospitalDataScraper:
         return None
     
     def _extract_patient_count(self, row):
-        """Extract patient count from a table row - look for the rightmost number"""
+        """Extract total patient count from a table row"""
         numbers = []
         for cell in row:
             try:
@@ -117,7 +118,13 @@ class HospitalDataScraper:
     
     def _extract_admitted_patients_count(self, row):
         """Extract admitted patients in ED count from a table row"""
+        # Look for the pattern: admitted patients are typically in the second-to-last numeric column
         numbers = []
+        row_str = ' '.join(str(cell).strip() for cell in row)
+        
+        # Log the row for debugging
+        logging.debug(f"Analyzing row for admitted patients: {row_str}")
+        
         for cell in row:
             try:
                 cell_str = str(cell).strip()
@@ -128,9 +135,15 @@ class HospitalDataScraper:
             except (ValueError, TypeError):
                 continue
         
-        # Return the second-to-last number if available (admitted patients typically come before total)
-        # If only one number, return None as we can't distinguish
-        return numbers[-2] if len(numbers) >= 2 else None
+        # If we have multiple numbers, the admitted count is typically the second-to-last
+        # This follows the pattern: [other data] [admitted_in_ed] [total_patients]
+        if len(numbers) >= 2:
+            admitted_count = numbers[-2]
+            logging.debug(f"Found {len(numbers)} numbers: {numbers}, using {admitted_count} as admitted count")
+            return admitted_count
+        
+        # If we can't distinguish, return None for now
+        return None
     
     def _save_hospital_data(self, hospital_data):
         """Save hospital data to database"""
