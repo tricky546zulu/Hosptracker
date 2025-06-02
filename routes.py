@@ -136,3 +136,16 @@ def get_weather():
         return jsonify({'error': f'Weather service unavailable: {str(e)}'}), 503
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/manual-scrape', methods=['POST'])
+def manual_scrape():
+    """Manually trigger hospital data scraping"""
+    try:
+        from pdf_scraper import run_scraping
+        success = run_scraping()
+        if success:
+            return jsonify({'success': True, 'message': 'Manual scraping completed'})
+        else:
+            return jsonify({'success': False, 'message': 'Scraping failed'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

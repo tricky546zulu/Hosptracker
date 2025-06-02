@@ -138,24 +138,23 @@ class HospitalDataScraper:
                     total_patients = None
                     admitted_patients = None
                     
-                    if total_col_idx is not None and total_col_idx < len(row.values):
+                    # Extract from the rightmost column for total (typically column 4 in the Saskatchewan table)
+                    if len(row.values) >= 5:
                         try:
-                            total_patients = int(str(row.values[total_col_idx]).strip())
+                            total_patients = int(str(row.values[4]).strip())
                         except (ValueError, TypeError):
-                            pass
-                    
-                    if admitted_col_idx is not None and admitted_col_idx < len(row.values):
-                        try:
-                            admitted_patients = int(str(row.values[admitted_col_idx]).strip())
-                        except (ValueError, TypeError):
-                            pass
-                    
-                    # If we couldn't get from specific columns, fallback to old method
-                    if total_patients is None:
+                            total_patients = self._extract_patient_count(row.values)
+                    else:
                         total_patients = self._extract_patient_count(row.values)
                     
-                    if admitted_patients is None:
-                        admitted_patients = self._extract_admitted_patients_count(row.values)
+                    # Extract from the first column for admitted patients (column 1 after Site name)
+                    if len(row.values) >= 2:
+                        try:
+                            admitted_patients = int(str(row.values[1]).strip())
+                        except (ValueError, TypeError):
+                            admitted_patients = None
+                    else:
+                        admitted_patients = None
                     
                     if total_patients is not None:
                         return {
