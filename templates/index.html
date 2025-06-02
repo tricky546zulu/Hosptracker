@@ -177,8 +177,10 @@ function updateHospitalCards(hospitals) {
             if (admittedInED !== null && admittedInED !== undefined) {
                 patientsElement.innerHTML = `
                     <div class="fs-1 fw-bold text-primary">${totalPatients}</div>
-                    <div class="mt-1">
-                        <small class="badge bg-secondary">${admittedInED} Admitted in ED</small>
+                    <div class="mt-2">
+                        <span class="badge rounded-pill border border-info text-info bg-transparent px-3 py-2 fs-6">
+                            <i class="fas fa-bed me-1"></i>${admittedInED} Admitted in ED
+                        </span>
                     </div>
                 `;
             } else {
