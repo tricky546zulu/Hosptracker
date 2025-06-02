@@ -103,7 +103,7 @@
 
 <!-- Status Section -->
 <div class="row g-4 mt-4">
-    <div class="col-12">
+    <div class="col-md-8">
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="clock" class="me-2"></i>
@@ -112,6 +112,21 @@
             <div class="card-body">
                 <div id="status-content">
                     <p class="text-muted">Loading system status...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weather Section -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <i data-feather="cloud" class="me-2"></i>
+                <h5 class="mb-0">Current Weather</h5>
+            </div>
+            <div class="card-body">
+                <div id="weather-content">
+                    <p class="text-muted">Loading weather data...</p>
                 </div>
             </div>
         </div>
@@ -125,11 +140,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadHospitalData();
     loadScrapingStatus();
+    loadWeatherData();
     
     // Auto-refresh every 10 minutes
     setInterval(() => {
         loadHospitalData();
         loadScrapingStatus();
+        loadWeatherData();
     }, 10 * 60 * 1000);
 });
 
@@ -224,12 +241,102 @@ function refreshData() {
     
     loadHospitalData();
     loadScrapingStatus();
+    loadWeatherData();
     
     setTimeout(() => {
         btn.disabled = false;
         btn.innerHTML = '<i data-feather="refresh-cw" class="me-1"></i>Refresh';
         feather.replace();
     }, 2000);
+}
+
+function loadWeatherData() {
+    fetch('/api/weather')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Weather data received:', data);
+            if (data.success) {
+                updateWeatherDisplay(data.data);
+            } else {
+                console.error('Weather request failed:', data);
+                updateWeatherDisplay(null, data.error || 'Unable to load weather data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading weather:', error);
+            updateWeatherDisplay(null, 'Weather service unavailable');
+        });
+}
+
+function updateWeatherDisplay(weather, error) {
+    const weatherContent = document.getElementById('weather-content');
+    
+    if (!weatherContent) {
+        console.error('Weather content element not found');
+        return;
+    }
+    
+    if (error || !weather) {
+        weatherContent.innerHTML = `
+            <div class="text-center text-muted">
+                <i data-feather="cloud-off" class="mb-2"></i>
+                <p class="mb-0">${error || 'Weather data unavailable'}</p>
+            </div>
+        `;
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+        return;
+    }
+    
+    const iconUrl = `https://openweathermap.org/img/wn/${weather.icon}@2x.png`;
+    
+    weatherContent.innerHTML = `
+        <div class="text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+                <img src="${iconUrl}" alt="${weather.description}" style="width: 48px; height: 48px;">
+                <div class="ms-2">
+                    <h3 class="mb-0">${weather.temperature}°C</h3>
+                    <small class="text-muted">Feels like ${weather.feels_like}°C</small>
+                </div>
+            </div>
+            <p class="text-capitalize mb-2">${weather.description}</p>
+            <small class="text-muted">${weather.city}</small>
+            
+            <hr class="my-3">
+            
+            <div class="row g-2 text-center">
+                <div class="col-6">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i data-feather="droplets" class="me-1" style="width: 14px; height: 14px;"></i>
+                        <small>${weather.humidity}%</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i data-feather="wind" class="me-1" style="width: 14px; height: 14px;"></i>
+                        <small>${weather.wind_speed} km/h</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i data-feather="eye" class="me-1" style="width: 14px; height: 14px;"></i>
+                        <small>${weather.visibility} km</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i data-feather="thermometer" class="me-1" style="width: 14px; height: 14px;"></i>
+                        <small>${weather.pressure} hPa</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
 }
 </script>
 {% endblock %}

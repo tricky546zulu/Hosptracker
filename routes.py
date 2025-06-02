@@ -1,5 +1,7 @@
 from flask import render_template, jsonify, request
 from datetime import datetime, timedelta
+import requests
+import os
 from app import app, db
 from models import HospitalCapacity, ScrapingLog
 
@@ -91,5 +93,44 @@ def get_scraping_status():
                 'timestamp': None
             })
             
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/weather')
+def get_weather():
+    """Get current weather for Saskatoon"""
+    try:
+        api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'Weather API key not configured'}), 500
+            
+        # Saskatoon coordinates
+        lat = 52.1332
+        lon = -106.6700
+        
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+        
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        
+        weather_data = response.json()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'temperature': round(weather_data['main']['temp']),
+                'feels_like': round(weather_data['main']['feels_like']),
+                'humidity': weather_data['main']['humidity'],
+                'description': weather_data['weather'][0]['description'].title(),
+                'icon': weather_data['weather'][0]['icon'],
+                'wind_speed': round(weather_data['wind']['speed'] * 3.6, 1),  # Convert m/s to km/h
+                'visibility': weather_data.get('visibility', 0) / 1000,  # Convert to km
+                'pressure': weather_data['main']['pressure'],
+                'city': weather_data['name']
+            }
+        })
+        
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Weather service unavailable: {str(e)}'}), 503
     except Exception as e:
         return jsonify({'error': str(e)}), 500
