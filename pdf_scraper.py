@@ -61,12 +61,38 @@ class HospitalDataScraper:
                 if 'Pts in ED' in table_text and 'Site' in table_text:
                     logging.info(f"Found Emergency Department summary table {table_num + 1}")
                     
-                    # Look for hospital codes in each row
+                    # Log the entire table structure for debugging
+                    logging.info("Full table content:")
                     for idx, row in df.iterrows():
-                        row_data = self._extract_hospital_from_row(row)
-                        if row_data:
-                            hospital_data.append(row_data)
-                            logging.info(f"Found {row_data['hospital_code']}: {row_data['total_patients']} patients")
+                        row_content = ' | '.join(str(cell).strip() for cell in row.values)
+                        logging.info(f"Row {idx}: {row_content}")
+                    
+                    # Identify column headers
+                    header_row_idx = None
+                    admitted_col_idx = None
+                    total_col_idx = None
+                    
+                    for idx, row in df.iterrows():
+                        row_text = ' '.join(str(cell).strip().lower() for cell in row.values)
+                        if 'admitted' in row_text and 'pts' in row_text:
+                            header_row_idx = idx
+                            # Find the column indices
+                            for col_idx, cell in enumerate(row.values):
+                                cell_text = str(cell).strip().lower()
+                                if 'admitted' in cell_text and 'pts' in cell_text:
+                                    admitted_col_idx = col_idx
+                                elif 'total' in cell_text and 'pts' in cell_text:
+                                    total_col_idx = col_idx
+                            logging.info(f"Found header at row {idx}, admitted_col: {admitted_col_idx}, total_col: {total_col_idx}")
+                            break
+                    
+                    # Extract data with column awareness
+                    for idx, row in df.iterrows():
+                        if idx != header_row_idx:  # Skip header row
+                            row_data = self._extract_hospital_from_row_with_columns(row, admitted_col_idx, total_col_idx)
+                            if row_data:
+                                hospital_data.append(row_data)
+                                logging.info(f"Found {row_data['hospital_code']}: {row_data['total_patients']} total, {row_data['admitted_patients_in_ed']} admitted")
                         
             except Exception as e:
                 logging.warning(f"Error processing table {table_num + 1}: {str(e)}")
@@ -97,6 +123,50 @@ class HospitalDataScraper:
                         
         except Exception as e:
             logging.warning(f"Error parsing row: {str(e)}")
+            
+        return None
+    
+    def _extract_hospital_from_row_with_columns(self, row, admitted_col_idx, total_col_idx):
+        """Extract hospital data from a row using specific column indices"""
+        try:
+            row_text = ' '.join(str(cell).strip() for cell in row.values)
+            
+            # Check if this row contains a hospital code
+            for code, name in self.hospital_mapping.items():
+                if code in row_text:
+                    # Extract values from specific columns
+                    total_patients = None
+                    admitted_patients = None
+                    
+                    if total_col_idx is not None and total_col_idx < len(row.values):
+                        try:
+                            total_patients = int(str(row.values[total_col_idx]).strip())
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if admitted_col_idx is not None and admitted_col_idx < len(row.values):
+                        try:
+                            admitted_patients = int(str(row.values[admitted_col_idx]).strip())
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # If we couldn't get from specific columns, fallback to old method
+                    if total_patients is None:
+                        total_patients = self._extract_patient_count(row.values)
+                    
+                    if admitted_patients is None:
+                        admitted_patients = self._extract_admitted_patients_count(row.values)
+                    
+                    if total_patients is not None:
+                        return {
+                            'hospital_code': code,
+                            'hospital_name': name,
+                            'total_patients': total_patients,
+                            'admitted_patients_in_ed': admitted_patients
+                        }
+                        
+        except Exception as e:
+            logging.warning(f"Error parsing row with columns: {str(e)}")
             
         return None
     
