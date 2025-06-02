@@ -6,6 +6,7 @@ class HospitalCapacity(db.Model):
     hospital_code = db.Column(db.String(10), nullable=False)
     hospital_name = db.Column(db.String(100), nullable=False)
     total_patients = db.Column(db.Integer)
+    admitted_patients_in_ed = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

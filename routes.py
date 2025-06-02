@@ -31,6 +31,7 @@ def get_hospital_data():
                     'hospital_code': latest.hospital_code,
                     'hospital_name': latest.hospital_name,
                     'total_patients': latest.total_patients,
+                    'admitted_patients_in_ed': latest.admitted_patients_in_ed,
                     'timestamp': latest.timestamp.isoformat()
                 })
         
@@ -60,6 +61,7 @@ def get_hospital_history(hospital_code):
             data.append({
                 'hospital_code': record.hospital_code,
                 'total_patients': record.total_patients,
+                'admitted_patients_in_ed': record.admitted_patients_in_ed,
                 'timestamp': record.timestamp.isoformat()
             })
         

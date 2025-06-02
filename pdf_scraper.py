@@ -86,10 +86,12 @@ class HospitalDataScraper:
                     patient_count = self._extract_patient_count(row)
                     
                     if patient_count is not None:
+                        admitted_count = self._extract_admitted_patients_count(row)
                         return {
                             'hospital_code': code,
                             'hospital_name': name,
-                            'total_patients': patient_count
+                            'total_patients': patient_count,
+                            'admitted_patients_in_ed': admitted_count
                         }
                         
         except Exception as e:
@@ -112,6 +114,23 @@ class HospitalDataScraper:
         
         # Return the last (rightmost) number found, as this is typically the total
         return numbers[-1] if numbers else None
+    
+    def _extract_admitted_patients_count(self, row):
+        """Extract admitted patients in ED count from a table row"""
+        numbers = []
+        for cell in row:
+            try:
+                cell_str = str(cell).strip()
+                if cell_str.isdigit():
+                    count = int(cell_str)
+                    if 0 <= count <= 200:  # Reasonable range for admitted patients in ED
+                        numbers.append(count)
+            except (ValueError, TypeError):
+                continue
+        
+        # Return the second-to-last number if available (admitted patients typically come before total)
+        # If only one number, return None as we can't distinguish
+        return numbers[-2] if len(numbers) >= 2 else None
     
     def _save_hospital_data(self, hospital_data):
         """Save hospital data to database"""
