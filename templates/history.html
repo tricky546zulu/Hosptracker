@@ -104,6 +104,7 @@
                             <tr>
                                 <th>Hospital</th>
                                 <th>Current Patients</th>
+                                <th>Admitted in ED</th>
                                 <th>7-Day Average</th>
                                 <th>Peak This Week</th>
                                 <th>Lowest This Week</th>
@@ -112,7 +113,7 @@
                         </thead>
                         <tbody id="summary-stats">
                             <tr>
-                                <td colspan="6" class="text-center text-muted">Loading summary statistics...</td>
+                                <td colspan="7" class="text-center text-muted">Loading summary statistics...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -316,7 +317,7 @@ function updateSummaryStats(allData) {
     };
     
     if (Object.keys(allData).length === 0) {
-        statsHTML = '<tr><td colspan="6" class="text-center text-muted">No data available for summary statistics</td></tr>';
+        statsHTML = '<tr><td colspan="7" class="text-center text-muted">No data available for summary statistics</td></tr>';
     } else {
         Object.keys(allData).forEach(hospital => {
             const data = allData[hospital];
@@ -324,6 +325,7 @@ function updateSummaryStats(allData) {
             
             const counts = data.map(item => item.total_patients || 0);
             const current = counts[counts.length - 1] || 0;
+            const currentAdmitted = data[data.length - 1]?.admitted_patients_in_ed || 0;
             const max = Math.max(...counts) || 0;
             const min = Math.min(...counts) || 0;
             const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
@@ -358,6 +360,9 @@ function updateSummaryStats(allData) {
                     </td>
                     <td class="text-center">
                         <span class="badge bg-primary fs-6">${current}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-warning text-dark">${currentAdmitted}</span>
                     </td>
                     <td class="text-center">
                         <span class="fs-6">${avg}</span>
