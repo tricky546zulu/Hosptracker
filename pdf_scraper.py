@@ -222,6 +222,7 @@ class HospitalDataScraper:
                 hospital.hospital_code = data['hospital_code']
                 hospital.hospital_name = data['hospital_name']
                 hospital.total_patients = data['total_patients']
+                hospital.admitted_patients_in_ed = data['admitted_patients_in_ed']
                 db.session.add(hospital)
             
             db.session.commit()
