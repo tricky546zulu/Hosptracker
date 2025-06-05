@@ -323,11 +323,11 @@ function updateSummaryStats(allData) {
             const data = allData[hospital];
             if (data.length === 0) return;
             
-            const counts = data.map(item => item.total_patients || 0);
-            const current = counts[counts.length - 1] || 0;
+            const counts = data.map(item => item.total_patients).filter(count => count !== null && count !== undefined && count > 0);
+            const current = data[data.length - 1]?.total_patients || 0;
             const currentAdmitted = data[data.length - 1]?.admitted_patients_in_ed || 0;
-            const max = Math.max(...counts) || 0;
-            const min = Math.min(...counts) || 0;
+            const max = counts.length > 0 ? Math.max(...counts) : 0;
+            const min = counts.length > 0 ? Math.min(...counts) : 0;
             const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
             
             // Calculate trend (compare first 25% vs last 25% of data)
