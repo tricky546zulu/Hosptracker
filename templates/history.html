@@ -15,6 +15,19 @@
     </a>
 </div>
 
+<!-- Date Range Selector -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label for="dateRangeSelect" class="form-label">Select Date Range:</label>
+        <select class="form-select" id="dateRangeSelect">
+            <option value="1">Last 24 hours</option>
+            <option value="3">Last 3 days</option>
+            <option value="7" selected>Last 7 days</option>
+            <option value="14">Last 14 days</option>
+        </select>
+    </div>
+</div>
+
 <!-- Historical Chart -->
 <div class="row g-4 mb-4">
     <div class="col-12">
@@ -22,6 +35,27 @@
             <div class="card-header d-flex align-items-center">
                 <i data-feather="trending-up" class="me-2"></i>
                 <h5 class="mb-0">7-Day Patient Count Trends</h5>
+            </div>
+            <div class="px-3 pt-3 pb-2 border-bottom"> <!-- Changed pb-0 to pb-2 for more space -->
+                <small class="text-muted">Toggle Hospitals:</small>
+                <div class="d-flex flex-wrap justify-content-start mt-1 mb-2">
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleRUH" value="RUH" checked>
+                        <label class="form-check-label" for="toggleRUH">RUH</label>
+                    </div>
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleSPH" value="SPH" checked>
+                        <label class="form-check-label" for="toggleSPH">SPH</label>
+                    </div>
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleSCH" value="SCH" checked>
+                        <label class="form-check-label" for="toggleSCH">SCH</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="toggleJPCH" value="JPCH" checked>
+                        <label class="form-check-label" for="toggleJPCH">JPCH</label>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <canvas id="historicalChart" height="300"></canvas>
@@ -127,13 +161,28 @@
 {% block scripts %}
 <script>
 let historicalChart = null;
+let originalChartDatasets = []; // Store all datasets before filtering
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     initializeHistoricalChart();
-    loadHistoricalData();
     
-    // Auto-refresh every 10 minutes
+    const dateRangeSelect = document.getElementById('dateRangeSelect');
+    if (dateRangeSelect) {
+        dateRangeSelect.addEventListener('change', loadHistoricalData);
+    }
+
+    loadHistoricalData(); // Initial load
+
+    // Setup checkbox listeners
+    ['toggleRUH', 'toggleSPH', 'toggleSCH', 'toggleJPCH'].forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', updateChartVisibility);
+        }
+    });
+
+    // Auto-refresh every 10 minutes (respecting selected date range)
     setInterval(() => {
         loadHistoricalData();
     }, 10 * 60 * 1000);
@@ -159,6 +208,16 @@ function initializeHistoricalChart() {
                     }
                 },
                 x: {
+                    type: 'time', // Set x-axis type to 'time'
+                    time: {
+                        tooltipFormat: 'MMM dd, yyyy HH:mm', // Format for tooltips
+                        displayFormats: {
+                            hour: 'HH:mm',        // Display hour and minute
+                            day: 'MMM dd',        // Display month and day
+                            week: 'MMM dd',       // Display month and day for week start
+                            month: 'MMM yyyy'     // Display month and year
+                        }
+                    },
                     title: {
                         display: true,
                         text: 'Time Period'
@@ -186,39 +245,60 @@ function loadHistoricalData() {
         'SCH': '#FFCE56',
         'JPCH': '#4BC0C0'
     };
-    
+
+    const dateRangeSelect = document.getElementById('dateRangeSelect');
+    const daysValue = dateRangeSelect ? dateRangeSelect.value : '7';
+    const rangeText = dateRangeSelect ? dateRangeSelect.options[dateRangeSelect.selectedIndex].text : 'Last 7 days';
+
+    // Update page subtitle and chart title
+    const pageSubtitle = document.querySelector('h1.display-6 + p.text-muted');
+    if (pageSubtitle) {
+        pageSubtitle.textContent = `${rangeText} view of Emergency Department patient counts`;
+    }
+    const chartCardHeader = document.querySelector('#historicalChart').closest('.card').querySelector('.card-header h5');
+    if (chartCardHeader) {
+        chartCardHeader.textContent = `${rangeText} Patient Count Trends`;
+    }
+    // Update summary statistics title
+    const summaryCardHeader = document.querySelector('#summary-table').closest('.card').querySelector('.card-header h5');
+    if (summaryCardHeader) {
+        summaryCardHeader.textContent = `${rangeText} Summary Statistics`;
+    }
+    // Update summary table headers
+    const summaryTable = document.getElementById('summary-table');
+    if (summaryTable) {
+        const thAverage = summaryTable.querySelector('thead th:nth-child(4)'); // 7-Day Average
+        const thPeak = summaryTable.querySelector('thead th:nth-child(5)'); // Peak This Week
+        const thLowest = summaryTable.querySelector('thead th:nth-child(6)'); // Lowest This Week
+        if (thAverage) thAverage.textContent = `${rangeText} Average`;
+        if (thPeak) thPeak.textContent = `Peak (${rangeText})`;
+        if (thLowest) thLowest.textContent = `Lowest (${rangeText})`;
+    }
+
+
     Promise.all(hospitals.map(code => 
-        fetch(`/api/hospital-history/${code}?days=7`).then(r => r.json())
+        fetch(`/api/hospital-history/${code}?days=${daysValue}`).then(r => r.json())
     )).then(results => {
-        const datasets = [];
+        originalChartDatasets = []; // Clear previous datasets
         const allData = {};
-        
         const allLabels = new Set();
         
         results.forEach((result, index) => {
             const hospital = hospitals[index];
             if (result.success && result.data.length > 0) {
-                // Sort data by timestamp
                 let sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
-                // Filter out anomalies and validate data
                 sortedData = filterDataAnomalies(sortedData, hospital);
-                
                 allData[hospital] = sortedData;
                 
-                // Create consistent time labels and data points
                 const dataPoints = sortedData.map(item => {
                     const utcTime = new Date(item.timestamp);
-                    // Convert to Saskatchewan time (UTC-6)
+                    // Convert to Saskatchewan time (UTC-6) for label generation if needed, but store Date objects
                     const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    const dateStr = saskTime.toLocaleDateString('en-CA');
-                    const timeStr = saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false});
-                    const label = `${dateStr} ${timeStr}`;
-                    allLabels.add(label);
+                    allLabels.add(saskTime); // Add the Date object itself for the time scale
                     return item.total_patients;
                 });
 
-                datasets.push({
+                originalChartDatasets.push({
                     label: hospital,
                     data: dataPoints,
                     borderColor: colors[hospital],
@@ -228,28 +308,48 @@ function loadHistoricalData() {
                     tension: 0.1
                 });
                 
-                // Update individual hospital table
                 updateHospitalTable(hospital.toLowerCase(), sortedData);
             }
         });
         
-        // Update chart with simple labels
-        const sortedLabels = Array.from(allLabels).sort();
-        historicalChart.data.labels = sortedLabels.slice(-20); // Show last 20 data points
+        // Sort Date objects correctly
+        const sortedLabels = Array.from(allLabels).sort((a, b) => a - b);
+        historicalChart.data.labels = sortedLabels;
         
-        // Adjust datasets to match label length
-        datasets.forEach(dataset => {
-            dataset.data = dataset.data.slice(-20);
-        });
+        updateChartVisibility(); // This will filter and update the chart
         
-        historicalChart.data.datasets = datasets;
-        historicalChart.update();
-        
-        // Update summary statistics
         updateSummaryStats(allData);
     }).catch(error => {
         console.error('Error loading historical data:', error);
+        // Potentially clear chart or show error message on chart
+        if (historicalChart) {
+            historicalChart.data.labels = [];
+            historicalChart.data.datasets = [];
+            historicalChart.update();
+            // You could also draw a message on the canvas if desired
+        }
     });
+}
+
+function updateChartVisibility() {
+    if (!historicalChart || !originalChartDatasets) {
+        return;
+    }
+
+    const selectedHospitals = [];
+    ['toggleRUH', 'toggleSPH', 'toggleSCH', 'toggleJPCH'].forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox && checkbox.checked) {
+            selectedHospitals.push(checkbox.value);
+        }
+    });
+
+    const filteredDatasets = originalChartDatasets.filter(dataset =>
+        selectedHospitals.includes(dataset.label)
+    );
+
+    historicalChart.data.datasets = filteredDatasets;
+    historicalChart.update();
 }
 
 function updateHospitalTable(hospitalCode, data) {
@@ -265,7 +365,8 @@ function updateHospitalTable(hospitalCode, data) {
             <thead>
                 <tr>
                     <th>Date/Time</th>
-                    <th>Patients</th>
+                    <th>Total Patients</th>
+                    <th>Admitted</th>
                     <th>Change</th>
                 </tr>
             </thead>
@@ -275,6 +376,7 @@ function updateHospitalTable(hospitalCode, data) {
     data.slice(-10).reverse().forEach((item, index, arr) => {
         const timestamp = new Date(item.timestamp);
         const saskTime = new Date(timestamp.getTime() - (6 * 60 * 60 * 1000));
+        const admittedInED = item.admitted_patients_in_ed || 0;
         
         let change = '';
         let changeClass = '';
@@ -297,6 +399,7 @@ function updateHospitalTable(hospitalCode, data) {
             <tr>
                 <td><small>${saskTime.toLocaleDateString('en-CA')} ${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small></td>
                 <td><strong>${item.total_patients}</strong></td>
+                <td><strong>${admittedInED}</strong></td>
                 <td><small class="${changeClass}">${change}</small></td>
             </tr>
         `;
