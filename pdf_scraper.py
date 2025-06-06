@@ -76,10 +76,6 @@ class HospitalDataScraper:
                         row_text = ' '.join(str(cell).strip().lower() for cell in row.values)
                         if 'admitted' in row_text and 'pts' in row_text:
                             header_row_idx = idx
-                            # Log the header row structure
-                            header_cells = [str(cell).strip() for cell in row.values]
-                            logging.info(f"Header row structure: {header_cells}")
-                            
                             # Find the column indices
                             for col_idx, cell in enumerate(row.values):
                                 cell_text = str(cell).strip().lower()
@@ -138,51 +134,35 @@ class HospitalDataScraper:
             # Check if this row contains a hospital code
             for code, name in self.hospital_mapping.items():
                 if code in row_text:
-                    # Log the raw row for debugging
-                    logging.info(f"Processing {code} row: {[str(cell).strip() for cell in row.values]}")
-                    
+                    # Extract values from specific columns
                     total_patients = None
                     admitted_patients = None
                     
-                    # Parse the cell content which contains multiple lines
-                    # Format is: "HOSPITAL_CODE\nAdmitted\nActive\nConsults"
-                    cell_content = str(row.values[0]).strip()
-                    lines = cell_content.split('\n')
-                    
-                    logging.info(f"Cell lines for {code}: {lines}")
-                    
-                    # Extract numbers from the lines
-                    if len(lines) >= 4:  # Hospital code + 3 numbers
+                    # Extract from the rightmost column for total (typically column 4 in the Saskatchewan table)
+                    if len(row.values) >= 5:
                         try:
-                            # Second line should be admitted patients
-                            admitted_patients = int(lines[1]) if lines[1].isdigit() else None
-                            logging.info(f"Extracted admitted patients for {code}: {admitted_patients}")
-                        except (ValueError, IndexError):
-                            admitted_patients = None
+                            total_patients = int(str(row.values[4]).strip())
+                        except (ValueError, TypeError):
+                            total_patients = self._extract_patient_count(row.values)
+                    else:
+                        total_patients = self._extract_patient_count(row.values)
                     
-                    # Extract total patients from the second column
+                    # Extract from the first column for admitted patients (column 1 after Site name)
                     if len(row.values) >= 2:
                         try:
-                            total_val = str(row.values[1]).strip()
-                            if total_val.isdigit():
-                                total_patients = int(total_val)
-                            else:
-                                total_patients = None
+                            admitted_patients = int(str(row.values[1]).strip())
                         except (ValueError, TypeError):
-                            total_patients = None
+                            admitted_patients = None
+                    else:
+                        admitted_patients = None
                     
-                    logging.info(f"Final values for {code}: total={total_patients}, admitted={admitted_patients}")
-                    
-                    # Validate the extracted data
-                    if self._validate_hospital_data(code, total_patients, admitted_patients):
+                    if total_patients is not None:
                         return {
                             'hospital_code': code,
                             'hospital_name': name,
                             'total_patients': total_patients,
                             'admitted_patients_in_ed': admitted_patients
                         }
-                    else:
-                        logging.warning(f"Data validation failed for {code}: total={total_patients}, admitted={admitted_patients}")
                         
         except Exception as e:
             logging.warning(f"Error parsing row with columns: {str(e)}")
@@ -252,54 +232,6 @@ class HospitalDataScraper:
             db.session.rollback()
             raise Exception(f"Failed to save hospital data: {str(e)}")
     
-    def _validate_hospital_data(self, hospital_code, total_patients, admitted_patients):
-        """Validate extracted hospital data for reasonableness"""
-        try:
-            # Basic null checks
-            if total_patients is None:
-                logging.warning(f"{hospital_code}: Total patients is None")
-                return False
-            
-            # Range validation
-            if not (0 <= total_patients <= 500):
-                logging.warning(f"{hospital_code}: Total patients {total_patients} out of reasonable range (0-500)")
-                return False
-            
-            # Admitted patients validation
-            if admitted_patients is not None:
-                if not (0 <= admitted_patients <= 200):
-                    logging.warning(f"{hospital_code}: Admitted patients {admitted_patients} out of reasonable range (0-200)")
-                    return False
-                
-                # Admitted should never exceed total
-                if admitted_patients > total_patients:
-                    logging.warning(f"{hospital_code}: Admitted patients ({admitted_patients}) exceeds total ({total_patients})")
-                    return False
-                
-                # Warn if admitted equals total (unusual but not invalid)
-                if admitted_patients == total_patients and total_patients > 0:
-                    logging.warning(f"{hospital_code}: Admitted patients equals total patients ({total_patients}) - verify this is correct")
-            
-            # Hospital-specific validation
-            hospital_ranges = {
-                'RUH': (5, 150),      # Large hospital
-                'SPH': (2, 80),       # Medium hospital  
-                'SCH': (1, 50),       # Smaller hospital
-                'JPCH': (0, 30)       # Children's hospital
-            }
-            
-            if hospital_code in hospital_ranges:
-                min_expected, max_expected = hospital_ranges[hospital_code]
-                if not (min_expected <= total_patients <= max_expected):
-                    logging.warning(f"{hospital_code}: Total patients {total_patients} outside expected range ({min_expected}-{max_expected}) for this hospital")
-            
-            logging.info(f"{hospital_code}: Data validation passed - Total: {total_patients}, Admitted: {admitted_patients}")
-            return True
-            
-        except Exception as e:
-            logging.error(f"Error validating data for {hospital_code}: {str(e)}")
-            return False
-
     def _log_scraping_result(self, status, message):
         """Log the scraping result"""
         try:
