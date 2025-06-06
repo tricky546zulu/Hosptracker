@@ -215,9 +215,45 @@ class HospitalDataScraper:
         return None
     
     def _save_hospital_data(self, hospital_data):
-        """Save hospital data to database"""
+        """Save hospital data to database with validation"""
         try:
+            # Define reasonable ranges for validation
+            hospital_ranges = {
+                'RUH': {'min': 15, 'max': 120},
+                'SPH': {'min': 5, 'max': 80},
+                'SCH': {'min': 0, 'max': 60},
+                'JPCH': {'min': 0, 'max': 40}
+            }
+            
+            valid_data = []
             for data in hospital_data:
+                total_patients = data['total_patients']
+                hospital_code = data['hospital_code']
+                
+                # Validate patient count is reasonable
+                range_check = hospital_ranges.get(hospital_code, {'min': 0, 'max': 200})
+                if total_patients < range_check['min'] or total_patients > range_check['max']:
+                    logging.warning(f"Skipping {hospital_code} data: {total_patients} patients outside reasonable range {range_check}")
+                    continue
+                
+                # Check for sudden changes compared to recent data
+                recent = HospitalCapacity.query.filter_by(hospital_code=hospital_code).order_by(
+                    HospitalCapacity.timestamp.desc()
+                ).first()
+                
+                if recent and recent.total_patients > 0:
+                    change_percent = abs(total_patients - recent.total_patients) / recent.total_patients
+                    time_diff = (datetime.utcnow() - recent.timestamp).total_seconds() / 60  # minutes
+                    
+                    # Skip if more than 50% change in less than 30 minutes (likely error)
+                    if change_percent > 0.5 and time_diff < 30:
+                        logging.warning(f"Skipping {hospital_code} data: {recent.total_patients} -> {total_patients} ({change_percent*100:.1f}% change in {time_diff:.1f} minutes)")
+                        continue
+                
+                valid_data.append(data)
+            
+            # Save valid data
+            for data in valid_data:
                 hospital = HospitalCapacity()
                 hospital.hospital_code = data['hospital_code']
                 hospital.hospital_name = data['hospital_name']
@@ -226,7 +262,7 @@ class HospitalDataScraper:
                 db.session.add(hospital)
             
             db.session.commit()
-            logging.info(f"Saved {len(hospital_data)} hospital records to database")
+            logging.info(f"Saved {len(valid_data)} validated hospital records to database (filtered {len(hospital_data) - len(valid_data)} invalid records)")
             
         except Exception as e:
             db.session.rollback()

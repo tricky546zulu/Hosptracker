@@ -199,15 +199,21 @@ function loadHistoricalData() {
             const hospital = hospitals[index];
             if (result.success && result.data.length > 0) {
                 // Sort data by timestamp
-                const sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                let sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                // Filter out anomalies and validate data
+                sortedData = filterDataAnomalies(sortedData, hospital);
                 
                 allData[hospital] = sortedData;
                 
-                // Create simple labels and data points
+                // Create consistent time labels and data points
                 const dataPoints = sortedData.map(item => {
                     const utcTime = new Date(item.timestamp);
+                    // Convert to Saskatchewan time (UTC-6)
                     const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    const label = saskTime.toLocaleDateString() + ' ' + saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit'});
+                    const dateStr = saskTime.toLocaleDateString('en-CA');
+                    const timeStr = saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false});
+                    const label = `${dateStr} ${timeStr}`;
                     allLabels.add(label);
                     return item.total_patients;
                 });
@@ -289,7 +295,7 @@ function updateHospitalTable(hospitalCode, data) {
         
         tableHTML += `
             <tr>
-                <td><small>${saskTime.toLocaleString('en-CA', {timeZone: 'America/Regina'})}</small></td>
+                <td><small>${saskTime.toLocaleDateString('en-CA')} ${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small></td>
                 <td><strong>${item.total_patients}</strong></td>
                 <td><small class="${changeClass}">${change}</small></td>
             </tr>
@@ -298,6 +304,73 @@ function updateHospitalTable(hospitalCode, data) {
     
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
+}
+
+function filterDataAnomalies(data, hospital) {
+    if (data.length === 0) return data;
+    
+    // Remove duplicates based on timestamp (keep most recent for each minute)
+    const uniqueData = [];
+    const seenMinutes = new Map();
+    
+    data.forEach(item => {
+        const minuteKey = new Date(item.timestamp).toISOString().slice(0, 16);
+        if (!seenMinutes.has(minuteKey) || new Date(item.timestamp) > new Date(seenMinutes.get(minuteKey).timestamp)) {
+            seenMinutes.set(minuteKey, item);
+        }
+    });
+    
+    // Convert back to array and sort
+    const deduplicatedData = Array.from(seenMinutes.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    // Define reasonable ranges for each hospital
+    const hospitalRanges = {
+        'RUH': { min: 15, max: 120 },
+        'SPH': { min: 5, max: 80 },
+        'SCH': { min: 0, max: 60 },
+        'JPCH': { min: 0, max: 40 }
+    };
+    
+    const range = hospitalRanges[hospital] || { min: 0, max: 200 };
+    
+    // Filter out values outside reasonable ranges
+    const validData = deduplicatedData.filter(item => {
+        const patients = item.total_patients || 0;
+        return patients >= range.min && patients <= range.max;
+    });
+    
+    // Remove sudden drops/spikes (more than 50% change within 15 minutes)
+    const smoothedData = [];
+    
+    for (let i = 0; i < validData.length; i++) {
+        const current = validData[i];
+        
+        if (i === 0) {
+            smoothedData.push(current);
+            continue;
+        }
+        
+        const previous = smoothedData[smoothedData.length - 1];
+        const currentTime = new Date(current.timestamp);
+        const previousTime = new Date(previous.timestamp);
+        const timeDiff = (currentTime - previousTime) / (1000 * 60); // minutes
+        
+        // If readings are within 15 minutes, check for sudden changes
+        if (timeDiff <= 15 && previous.total_patients > 0) {
+            const changePercent = Math.abs((current.total_patients - previous.total_patients) / previous.total_patients);
+            
+            // Skip readings with more than 50% change (likely data errors)
+            if (changePercent > 0.5) {
+                console.log(`Filtering anomaly for ${hospital}: ${previous.total_patients} -> ${current.total_patients} (${(changePercent * 100).toFixed(1)}% change)`);
+                continue;
+            }
+        }
+        
+        smoothedData.push(current);
+    }
+    
+    console.log(`${hospital}: ${data.length} -> ${deduplicatedData.length} -> ${validData.length} -> ${smoothedData.length} data points after filtering`);
+    return smoothedData;
 }
 
 function updateSummaryStats(allData) {
