@@ -45,7 +45,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
@@ -59,7 +59,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
@@ -73,7 +73,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex align-items-center">
@@ -132,7 +132,7 @@ let historicalChart = null;
 document.addEventListener('DOMContentLoaded', function() {
     initializeHistoricalChart();
     loadHistoricalData();
-    
+
     // Auto-refresh every 10 minutes
     setInterval(() => {
         loadHistoricalData();
@@ -186,29 +186,30 @@ function loadHistoricalData() {
         'SCH': '#FFCE56',
         'JPCH': '#4BC0C0'
     };
-    
+
     Promise.all(hospitals.map(code => 
         fetch(`/api/hospital-history/${code}?days=7`).then(r => r.json())
     )).then(results => {
         const datasets = [];
         const allData = {};
-        
+
         const allLabels = new Set();
-        
+        const chartLabels = [];
+
         results.forEach((result, index) => {
             const hospital = hospitals[index];
             if (result.success && result.data.length > 0) {
                 // Sort data by timestamp
                 const sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
+
                 allData[hospital] = sortedData;
-                
+
                 // Create simple labels and data points
                 const dataPoints = sortedData.map(item => {
                     const utcTime = new Date(item.timestamp);
                     const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    const label = saskTime.toLocaleDateString() + ' ' + saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit'});
-                    allLabels.add(label);
+                    chartLabels.push(saskTime);
+                    allLabels.add(saskTime);
                     return item.total_patients;
                 });
 
@@ -221,24 +222,70 @@ function loadHistoricalData() {
                     fill: false,
                     tension: 0.1
                 });
-                
+
                 // Update individual hospital table
                 updateHospitalTable(hospital.toLowerCase(), sortedData);
             }
         });
-        
-        // Update chart with simple labels
-        const sortedLabels = Array.from(allLabels).sort();
-        historicalChart.data.labels = sortedLabels.slice(-20); // Show last 20 data points
-        
-        // Adjust datasets to match label length
-        datasets.forEach(dataset => {
-            dataset.data = dataset.data.slice(-20);
-        });
-        
-        historicalChart.data.datasets = datasets;
-        historicalChart.update();
-        
+
+        // Initialize chart if datasets are available
+        const ctx = document.getElementById('historicalChart').getContext('2d');
+        if (datasets.length > 0) {
+            historicalChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM DD HH:mm'
+                                },
+                                tooltipFormat: 'MMM DD, YYYY HH:mm'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time (Saskatchewan)'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Patients'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleString('en-CA', {
+                                        timeZone: 'America/Regina',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
         // Update summary statistics
         updateSummaryStats(allData);
     }).catch(error => {
@@ -248,12 +295,12 @@ function loadHistoricalData() {
 
 function updateHospitalTable(hospitalCode, data) {
     const container = document.getElementById(`${hospitalCode}-history`);
-    
+
     if (data.length === 0) {
         container.innerHTML = '<p class="text-muted">No historical data available</p>';
         return;
     }
-    
+
     let tableHTML = `
         <table class="table table-sm">
             <thead>
@@ -265,11 +312,11 @@ function updateHospitalTable(hospitalCode, data) {
             </thead>
             <tbody>
     `;
-    
+
     data.slice(-10).reverse().forEach((item, index, arr) => {
         const timestamp = new Date(item.timestamp);
         const saskTime = new Date(timestamp.getTime() - (6 * 60 * 60 * 1000));
-        
+
         let change = '';
         let changeClass = '';
         if (index < arr.length - 1) {
@@ -286,7 +333,7 @@ function updateHospitalTable(hospitalCode, data) {
                 changeClass = 'text-muted';
             }
         }
-        
+
         tableHTML += `
             <tr>
                 <td><small>${saskTime.toLocaleString('en-CA', {timeZone: 'America/Regina'})}</small></td>
@@ -295,19 +342,19 @@ function updateHospitalTable(hospitalCode, data) {
             </tr>
         `;
     });
-    
+
     tableHTML += '</tbody></table>';
     container.innerHTML = tableHTML;
 }
 
 function updateSummaryStats(allData) {
     const container = document.getElementById('summary-stats');
-    
+
     if (!container) {
         console.error('Summary stats container not found');
         return;
     }
-    
+
     let statsHTML = '';
     const hospitalNames = {
         'RUH': 'Royal University Hospital',
@@ -315,30 +362,30 @@ function updateSummaryStats(allData) {
         'SCH': 'Saskatoon City Hospital',
         'JPCH': 'Jim Pattison Children\'s Hospital'
     };
-    
+
     if (Object.keys(allData).length === 0) {
         statsHTML = '<tr><td colspan="7" class="text-center text-muted">No data available for summary statistics</td></tr>';
     } else {
         Object.keys(allData).forEach(hospital => {
             const data = allData[hospital];
             if (data.length === 0) return;
-            
+
             const counts = data.map(item => item.total_patients).filter(count => count !== null && count !== undefined && count > 0);
             const current = data[data.length - 1]?.total_patients || 0;
             const currentAdmitted = data[data.length - 1]?.admitted_patients_in_ed || 0;
             const max = counts.length > 0 ? Math.max(...counts) : 0;
             const min = counts.length > 0 ? Math.min(...counts) : 0;
             const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
-            
+
             // Calculate trend (compare first 25% vs last 25% of data)
             const quarterSize = Math.floor(counts.length / 4);
             const firstQuarter = quarterSize > 0 ? counts.slice(0, quarterSize) : [counts[0]];
             const lastQuarter = quarterSize > 0 ? counts.slice(-quarterSize) : [counts[counts.length - 1]];
-            
+
             const firstAvg = firstQuarter.reduce((a, b) => a + b, 0) / firstQuarter.length;
             const lastAvg = lastQuarter.reduce((a, b) => a + b, 0) / lastQuarter.length;
             const trendPercent = ((lastAvg - firstAvg) / firstAvg * 100).toFixed(1);
-            
+
             let trendIcon = '';
             let trendClass = '';
             if (trendPercent > 5) {
@@ -351,7 +398,7 @@ function updateSummaryStats(allData) {
                 trendIcon = '→';
                 trendClass = 'text-muted';
             }
-            
+
             statsHTML += `
                 <tr>
                     <td>
@@ -382,7 +429,7 @@ function updateSummaryStats(allData) {
             `;
         });
     }
-    
+
     container.innerHTML = statsHTML;
 }
 </script>
