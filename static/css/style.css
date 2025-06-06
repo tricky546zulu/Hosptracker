@@ -9,6 +9,45 @@
     --capacity-low: hsl(120 50% 40%);
 }
 
+/* Accessibility: Skip Link */
+.skip-link {
+    position: absolute;
+    left: -9999px; /* Send off-screen */
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: -999;
+    background-color: var(--bs-dark-bg-subtle); /* Ensure it has a background when focused */
+    color: var(--bs-emphasis-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+}
+
+.skip-link:focus,
+.skip-link:active {
+    left: 1rem;
+    top: 1rem;
+    width: auto;
+    height: auto;
+    overflow: auto;
+    z-index: 1056; /* Higher than most Bootstrap components like navbars */
+    text-decoration: none;
+}
+
+/* Accessibility: Global Focus Indicator */
+*:focus-visible {
+    outline: 3px solid var(--bs-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.5);
+}
+
+*:focus {
+    outline: 3px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+
 /* Card enhancements */
 .card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -18,6 +57,22 @@
 .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart loading overlay */
+.chart-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--bs-dark-rgb), 0.75); /* Semi-transparent overlay */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10; /* Ensure it's above the canvas */
+    border-radius: var(--bs-card-inner-border-radius); /* Match card body's border radius if any */
 }
 
 /* Progress bar customization */
@@ -132,9 +187,22 @@
 }
 
 /* Footer styling */
-footer {
-    margin-top: auto;
+.footer { /* Renamed from 'footer' to '.footer' to target the class */
+    margin-top: auto; /* This helps if the main content isn't tall enough */
+    font-size: 0.875rem; /* Slightly smaller text for unobtrusiveness */
+    /* background-color: var(--bs-body-bg); /* Match body background if not using bg-dark */
+    /* color: var(--bs-body-color); */ /* Match body text color if not using text-light */
 }
+
+.footer a {
+    /* color: var(--bs-body-color); */ /* Ensure link color matches footer text if not using text-light */
+    text-decoration: underline; /* Make links a bit more obvious */
+}
+
+.footer a:hover {
+    text-decoration: none; /* Remove underline on hover for a cleaner look */
+}
+
 
 /* Navbar enhancements */
 .navbar-brand {

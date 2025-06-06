@@ -15,6 +15,19 @@
     </a>
 </div>
 
+<!-- Date Range Selector -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label for="dateRangeSelect" class="form-label">Select Date Range:</label>
+        <select class="form-select" id="dateRangeSelect">
+            <option value="1">Last 24 hours</option>
+            <option value="3">Last 3 days</option>
+            <option value="7" selected>Last 7 days</option>
+            <option value="14">Last 14 days</option>
+        </select>
+    </div>
+</div>
+
 <!-- Historical Chart -->
 <div class="row g-4 mb-4">
     <div class="col-12">
@@ -23,8 +36,35 @@
                 <i data-feather="trending-up" class="me-2"></i>
                 <h5 class="mb-0">7-Day Patient Count Trends</h5>
             </div>
-            <div class="card-body">
-                <canvas id="historicalChart" height="300"></canvas>
+            <div class="px-3 pt-3 pb-2 border-bottom"> <!-- Changed pb-0 to pb-2 for more space -->
+                <small class="text-muted">Toggle Hospitals:</small>
+                <div class="d-flex flex-wrap justify-content-start mt-1 mb-2">
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleRUH" value="RUH" checked>
+                        <label class="form-check-label" for="toggleRUH">RUH</label>
+                    </div>
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleSPH" value="SPH" checked>
+                        <label class="form-check-label" for="toggleSPH">SPH</label>
+                    </div>
+                    <div class="form-check form-check-inline me-3">
+                        <input class="form-check-input" type="checkbox" id="toggleSCH" value="SCH" checked>
+                        <label class="form-check-label" for="toggleSCH">SCH</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="toggleJPCH" value="JPCH" checked>
+                        <label class="form-check-label" for="toggleJPCH">JPCH</label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body position-relative"> {/* Added position-relative for overlay positioning */}
+                <div id="chart-loading-overlay" class="chart-loading-overlay" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading chart data...</p>
+                </div>
+                <canvas id="historicalChart" height="300" aria-label="Historical patient count trends chart. Content updates with date range selection."></canvas>
             </div>
         </div>
     </div>
@@ -39,7 +79,7 @@
                 <h5 class="mb-0">RUH - Royal University Hospital</h5>
             </div>
             <div class="card-body">
-                <div id="ruh-history" class="table-responsive">
+                <div id="ruh-history" class="table-responsive" aria-live="polite">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
             </div>
@@ -53,7 +93,7 @@
                 <h5 class="mb-0">SPH - St. Paul's Hospital</h5>
             </div>
             <div class="card-body">
-                <div id="sph-history" class="table-responsive">
+                <div id="sph-history" class="table-responsive" aria-live="polite">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
             </div>
@@ -67,7 +107,7 @@
                 <h5 class="mb-0">SCH - Saskatoon City Hospital</h5>
             </div>
             <div class="card-body">
-                <div id="sch-history" class="table-responsive">
+                <div id="sch-history" class="table-responsive" aria-live="polite">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
             </div>
@@ -81,7 +121,7 @@
                 <h5 class="mb-0">JPCH - Jim Pattison Children's Hospital</h5>
             </div>
             <div class="card-body">
-                <div id="jpch-history" class="table-responsive">
+                <div id="jpch-history" class="table-responsive" aria-live="polite">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
             </div>
@@ -111,7 +151,7 @@
                                 <th>Trend</th>
                             </tr>
                         </thead>
-                        <tbody id="summary-stats">
+                        <tbody id="summary-stats" aria-live="polite">
                             <tr>
                                 <td colspan="7" class="text-center text-muted">Loading summary statistics...</td>
                             </tr>
@@ -125,338 +165,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-let historicalChart = null;
-
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    initializeHistoricalChart();
-    loadHistoricalData();
-    
-    // Auto-refresh every 10 minutes
-    setInterval(() => {
-        loadHistoricalData();
-    }, 10 * 60 * 1000);
-});
-
-function initializeHistoricalChart() {
-    const ctx = document.getElementById('historicalChart').getContext('2d');
-    historicalChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: []
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Emergency Department Patients'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Time Period'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'top'
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
-                }
-            }
-        }
-    });
-}
-
-function loadHistoricalData() {
-    const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
-    const colors = {
-        'RUH': '#FF6384',
-        'SPH': '#36A2EB', 
-        'SCH': '#FFCE56',
-        'JPCH': '#4BC0C0'
-    };
-    
-    Promise.all(hospitals.map(code => 
-        fetch(`/api/hospital-history/${code}?days=7`).then(r => r.json())
-    )).then(results => {
-        const datasets = [];
-        const allData = {};
-        
-        const allLabels = new Set();
-        
-        results.forEach((result, index) => {
-            const hospital = hospitals[index];
-            if (result.success && result.data.length > 0) {
-                // Sort data by timestamp
-                let sortedData = result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
-                // Filter out anomalies and validate data
-                sortedData = filterDataAnomalies(sortedData, hospital);
-                
-                allData[hospital] = sortedData;
-                
-                // Create consistent time labels and data points
-                const dataPoints = sortedData.map(item => {
-                    const utcTime = new Date(item.timestamp);
-                    // Convert to Saskatchewan time (UTC-6)
-                    const saskTime = new Date(utcTime.getTime() - (6 * 60 * 60 * 1000));
-                    const dateStr = saskTime.toLocaleDateString('en-CA');
-                    const timeStr = saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false});
-                    const label = `${dateStr} ${timeStr}`;
-                    allLabels.add(label);
-                    return item.total_patients;
-                });
-
-                datasets.push({
-                    label: hospital,
-                    data: dataPoints,
-                    borderColor: colors[hospital],
-                    backgroundColor: colors[hospital] + '20',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.1
-                });
-                
-                // Update individual hospital table
-                updateHospitalTable(hospital.toLowerCase(), sortedData);
-            }
-        });
-        
-        // Update chart with simple labels
-        const sortedLabels = Array.from(allLabels).sort();
-        historicalChart.data.labels = sortedLabels.slice(-20); // Show last 20 data points
-        
-        // Adjust datasets to match label length
-        datasets.forEach(dataset => {
-            dataset.data = dataset.data.slice(-20);
-        });
-        
-        historicalChart.data.datasets = datasets;
-        historicalChart.update();
-        
-        // Update summary statistics
-        updateSummaryStats(allData);
-    }).catch(error => {
-        console.error('Error loading historical data:', error);
-    });
-}
-
-function updateHospitalTable(hospitalCode, data) {
-    const container = document.getElementById(`${hospitalCode}-history`);
-    
-    if (data.length === 0) {
-        container.innerHTML = '<p class="text-muted">No historical data available</p>';
-        return;
-    }
-    
-    let tableHTML = `
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Date/Time</th>
-                    <th>Patients</th>
-                    <th>Change</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    data.slice(-10).reverse().forEach((item, index, arr) => {
-        const timestamp = new Date(item.timestamp);
-        const saskTime = new Date(timestamp.getTime() - (6 * 60 * 60 * 1000));
-        
-        let change = '';
-        let changeClass = '';
-        if (index < arr.length - 1) {
-            const prevCount = arr[index + 1].total_patients;
-            const diff = item.total_patients - prevCount;
-            if (diff > 0) {
-                change = `+${diff}`;
-                changeClass = 'text-danger';
-            } else if (diff < 0) {
-                change = `${diff}`;
-                changeClass = 'text-success';
-            } else {
-                change = '0';
-                changeClass = 'text-muted';
-            }
-        }
-        
-        tableHTML += `
-            <tr>
-                <td><small>${saskTime.toLocaleDateString('en-CA')} ${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small></td>
-                <td><strong>${item.total_patients}</strong></td>
-                <td><small class="${changeClass}">${change}</small></td>
-            </tr>
-        `;
-    });
-    
-    tableHTML += '</tbody></table>';
-    container.innerHTML = tableHTML;
-}
-
-function filterDataAnomalies(data, hospital) {
-    if (data.length === 0) return data;
-    
-    // Remove duplicates based on timestamp (keep most recent for each minute)
-    const uniqueData = [];
-    const seenMinutes = new Map();
-    
-    data.forEach(item => {
-        const minuteKey = new Date(item.timestamp).toISOString().slice(0, 16);
-        if (!seenMinutes.has(minuteKey) || new Date(item.timestamp) > new Date(seenMinutes.get(minuteKey).timestamp)) {
-            seenMinutes.set(minuteKey, item);
-        }
-    });
-    
-    // Convert back to array and sort
-    const deduplicatedData = Array.from(seenMinutes.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    
-    // Define reasonable ranges for each hospital
-    const hospitalRanges = {
-        'RUH': { min: 15, max: 120 },
-        'SPH': { min: 5, max: 80 },
-        'SCH': { min: 0, max: 60 },
-        'JPCH': { min: 0, max: 40 }
-    };
-    
-    const range = hospitalRanges[hospital] || { min: 0, max: 200 };
-    
-    // Filter out values outside reasonable ranges
-    const validData = deduplicatedData.filter(item => {
-        const patients = item.total_patients || 0;
-        return patients >= range.min && patients <= range.max;
-    });
-    
-    // Remove sudden drops/spikes (more than 50% change within 15 minutes)
-    const smoothedData = [];
-    
-    for (let i = 0; i < validData.length; i++) {
-        const current = validData[i];
-        
-        if (i === 0) {
-            smoothedData.push(current);
-            continue;
-        }
-        
-        const previous = smoothedData[smoothedData.length - 1];
-        const currentTime = new Date(current.timestamp);
-        const previousTime = new Date(previous.timestamp);
-        const timeDiff = (currentTime - previousTime) / (1000 * 60); // minutes
-        
-        // If readings are within 15 minutes, check for sudden changes
-        if (timeDiff <= 15 && previous.total_patients > 0) {
-            const changePercent = Math.abs((current.total_patients - previous.total_patients) / previous.total_patients);
-            
-            // Skip readings with more than 50% change (likely data errors)
-            if (changePercent > 0.5) {
-                console.log(`Filtering anomaly for ${hospital}: ${previous.total_patients} -> ${current.total_patients} (${(changePercent * 100).toFixed(1)}% change)`);
-                continue;
-            }
-        }
-        
-        smoothedData.push(current);
-    }
-    
-    console.log(`${hospital}: ${data.length} -> ${deduplicatedData.length} -> ${validData.length} -> ${smoothedData.length} data points after filtering`);
-    return smoothedData;
-}
-
-function updateSummaryStats(allData) {
-    const container = document.getElementById('summary-stats');
-    
-    if (!container) {
-        console.error('Summary stats container not found');
-        return;
-    }
-    
-    let statsHTML = '';
-    const hospitalNames = {
-        'RUH': 'Royal University Hospital',
-        'SPH': 'St. Paul\'s Hospital', 
-        'SCH': 'Saskatoon City Hospital',
-        'JPCH': 'Jim Pattison Children\'s Hospital'
-    };
-    
-    if (Object.keys(allData).length === 0) {
-        statsHTML = '<tr><td colspan="7" class="text-center text-muted">No data available for summary statistics</td></tr>';
-    } else {
-        Object.keys(allData).forEach(hospital => {
-            const data = allData[hospital];
-            if (data.length === 0) return;
-            
-            const counts = data.map(item => item.total_patients || 0);
-            const current = counts[counts.length - 1] || 0;
-            const currentAdmitted = data[data.length - 1]?.admitted_patients_in_ed || 0;
-            const max = Math.max(...counts) || 0;
-            const min = Math.min(...counts) || 0;
-            const avg = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
-            
-            // Calculate trend (compare first 25% vs last 25% of data)
-            const quarterSize = Math.floor(counts.length / 4);
-            const firstQuarter = quarterSize > 0 ? counts.slice(0, quarterSize) : [counts[0]];
-            const lastQuarter = quarterSize > 0 ? counts.slice(-quarterSize) : [counts[counts.length - 1]];
-            
-            const firstAvg = firstQuarter.reduce((a, b) => a + b, 0) / firstQuarter.length;
-            const lastAvg = lastQuarter.reduce((a, b) => a + b, 0) / lastQuarter.length;
-            const trendPercent = ((lastAvg - firstAvg) / firstAvg * 100).toFixed(1);
-            
-            let trendIcon = '';
-            let trendClass = '';
-            if (trendPercent > 5) {
-                trendIcon = '↗️';
-                trendClass = 'text-danger';
-            } else if (trendPercent < -5) {
-                trendIcon = '↘️';
-                trendClass = 'text-success';
-            } else {
-                trendIcon = '→';
-                trendClass = 'text-muted';
-            }
-            
-            statsHTML += `
-                <tr>
-                    <td>
-                        <strong>${hospital}</strong><br>
-                        <small class="text-muted">${hospitalNames[hospital] || hospital}</small>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge bg-primary fs-6">${current}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge rounded-pill border border-info text-info bg-transparent px-3 py-1">
-                            <i class="fas fa-bed me-1"></i>${currentAdmitted}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <span class="fs-6">${avg}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="text-danger fw-bold">${max}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="text-success fw-bold">${min}</span>
-                    </td>
-                    <td class="text-center">
-                        <span class="${trendClass}">${trendIcon} ${Math.abs(trendPercent)}%</span>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-    
-    container.innerHTML = statsHTML;
-}
-</script>
+{{ super() }} {# Assuming base.html might have scripts, good practice to include them #}
+<script src="{{ url_for('static', filename='js/history-page.js') }}" defer></script>
 {% endblock %}
