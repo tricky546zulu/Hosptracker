@@ -144,34 +144,34 @@ class HospitalDataScraper:
                     total_patients = None
                     admitted_patients = None
                     
-                    # Based on the table structure: Site | Admitted Pts in ED | Active | Consults | Total Pts in ED
-                    # Extract admitted patients from column 1 (after Site)
-                    if len(row.values) >= 2:
+                    # Parse the cell content which contains multiple lines
+                    # Format is: "HOSPITAL_CODE\nAdmitted\nActive\nConsults"
+                    cell_content = str(row.values[0]).strip()
+                    lines = cell_content.split('\n')
+                    
+                    logging.info(f"Cell lines for {code}: {lines}")
+                    
+                    # Extract numbers from the lines
+                    if len(lines) >= 4:  # Hospital code + 3 numbers
                         try:
-                            admitted_val = str(row.values[1]).strip()
-                            if admitted_val.isdigit():
-                                admitted_patients = int(admitted_val)
-                            else:
-                                admitted_patients = None
-                        except (ValueError, TypeError):
+                            # Second line should be admitted patients
+                            admitted_patients = int(lines[1]) if lines[1].isdigit() else None
+                            logging.info(f"Extracted admitted patients for {code}: {admitted_patients}")
+                        except (ValueError, IndexError):
                             admitted_patients = None
                     
-                    # Extract total patients from the last numeric column
-                    # Look for the rightmost number in the row
-                    numbers_found = []
-                    for i, cell in enumerate(row.values):
+                    # Extract total patients from the second column
+                    if len(row.values) >= 2:
                         try:
-                            cell_str = str(cell).strip()
-                            if cell_str.isdigit():
-                                num = int(cell_str)
-                                if 0 <= num <= 500:  # Reasonable range
-                                    numbers_found.append((i, num))
+                            total_val = str(row.values[1]).strip()
+                            if total_val.isdigit():
+                                total_patients = int(total_val)
+                            else:
+                                total_patients = None
                         except (ValueError, TypeError):
-                            continue
+                            total_patients = None
                     
-                    # Total should be the rightmost number
-                    if numbers_found:
-                        total_patients = numbers_found[-1][1]
+                    logging.info(f"Final values for {code}: total={total_patients}, admitted={admitted_patients}")
                     
                     # Validate the extracted data
                     if self._validate_hospital_data(code, total_patients, admitted_patients):
