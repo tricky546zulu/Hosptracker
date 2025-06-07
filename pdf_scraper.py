@@ -31,6 +31,9 @@ class HospitalDataScraper:
             # Process tables to find Emergency Department data
             hospital_data = self._extract_emergency_department_data(tables)
             
+            # Handle missing hospitals (like SCH when they have 0 patients)
+            hospital_data = self._handle_missing_hospitals(hospital_data)
+            
             if hospital_data:
                 self._save_hospital_data(hospital_data)
                 self._log_scraping_result('success', f'Successfully processed {len(hospital_data)} hospitals')
@@ -232,9 +235,13 @@ class HospitalDataScraper:
                 total_patients = data['total_patients']
                 hospital_code = data['hospital_code']
                 
-                # Validate patient count is reasonable
+                # Validate patient count is reasonable (allow 0 for SCH when missing from PDF)
                 range_check = hospital_ranges.get(hospital_code, {'min': 0, 'max': 200})
-                if total_patients < range_check['min'] or total_patients > range_check['max']:
+                
+                # Special handling for SCH - allow 0 even if it's below the normal minimum
+                if hospital_code == 'SCH' and total_patients == 0:
+                    logging.info(f"Accepting SCH with 0 patients (likely missing from PDF)")
+                elif total_patients < range_check['min'] or total_patients > range_check['max']:
                     logging.warning(f"Skipping {hospital_code} data: {total_patients} patients outside reasonable range {range_check}")
                     continue
                 
@@ -270,6 +277,36 @@ class HospitalDataScraper:
             db.session.rollback()
             raise Exception(f"Failed to save hospital data: {str(e)}")
     
+    def _handle_missing_hospitals(self, hospital_data):
+        """Handle hospitals that might be missing from the PDF (like SCH when they have 0 patients)"""
+        found_hospitals = {data['hospital_code'] for data in hospital_data}
+        all_expected_hospitals = set(self.hospital_mapping.keys())
+        missing_hospitals = all_expected_hospitals - found_hospitals
+        
+        if missing_hospitals:
+            logging.info(f"Missing hospitals from PDF: {missing_hospitals}")
+            
+            # For missing hospitals, check if they should be set to zero or kept as previous value
+            for hospital_code in missing_hospitals:
+                # Get the most recent data for this hospital
+                recent = HospitalCapacity.query.filter_by(hospital_code=hospital_code).order_by(
+                    HospitalCapacity.timestamp.desc()
+                ).first()
+                
+                # If SCH is missing and was recently non-zero, likely means they now have 0 patients
+                if hospital_code == 'SCH' and recent and recent.total_patients > 0:
+                    logging.info(f"SCH missing from PDF - likely has 0 patients, setting to zero")
+                    hospital_data.append({
+                        'hospital_code': hospital_code,
+                        'hospital_name': self.hospital_mapping[hospital_code],
+                        'total_patients': 0,
+                        'admitted_patients_in_ed': 0
+                    })
+                else:
+                    logging.info(f"Hospital {hospital_code} missing from PDF - keeping previous data")
+        
+        return hospital_data
+
     def _log_scraping_result(self, status, message):
         """Log the scraping result"""
         try:
