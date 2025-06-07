@@ -148,27 +148,27 @@ class HospitalDataScraper:
                     total_patients = None
                     admitted_patients = None
                     
-                    # Based on the observed pattern: JPCH 1 0 0 | 1, RUH 27 24 2 | 53, SPH 17 17 0 | 34
-                    # Structure appears to be: [Hospital] [Admitted] [Active] [Consults] [Total]
+                    # Based on the table header: Admitted | Active | Consults | Total
+                    # Structure is: [Hospital] [Admitted_in_ED] [Active] [Consults] [Total_in_ED]
                     if len(numeric_values) >= 4:
-                        admitted_patients = numeric_values[0]  # First number after hospital code
-                        total_patients = numeric_values[-1]   # Last number (total)
-                        logging.info(f"Using pattern for 4+ numbers: admitted={admitted_patients}, total={total_patients}")
+                        admitted_patients = numeric_values[0]  # First number: Admitted Pts in ED
+                        total_patients = numeric_values[3]     # Fourth number: Total Pts in ED
+                        logging.info(f"Using 4-column pattern: admitted={admitted_patients}, total={total_patients}")
                     elif len(numeric_values) == 3:
-                        # Might be missing one column, assume first is admitted, last is total
+                        # Missing one column, assume [Admitted, Active, Total] or [Admitted, Consults, Total]
                         admitted_patients = numeric_values[0]
-                        total_patients = numeric_values[-1]
-                        logging.info(f"Using pattern for 3 numbers: admitted={admitted_patients}, total={total_patients}")
+                        total_patients = numeric_values[2]     # Third number is total
+                        logging.info(f"Using 3-column pattern: admitted={admitted_patients}, total={total_patients}")
                     elif len(numeric_values) == 2:
-                        # Could be admitted and total
+                        # Could be [Admitted, Total]
                         admitted_patients = numeric_values[0]
                         total_patients = numeric_values[1]
-                        logging.info(f"Using pattern for 2 numbers: admitted={admitted_patients}, total={total_patients}")
+                        logging.info(f"Using 2-column pattern: admitted={admitted_patients}, total={total_patients}")
                     elif len(numeric_values) == 1:
                         # Only total available
                         total_patients = numeric_values[0]
                         admitted_patients = 0
-                        logging.info(f"Using pattern for 1 number: admitted=0, total={total_patients}")
+                        logging.info(f"Using 1-column pattern: admitted=0, total={total_patients}")
                     
                     # Validation: admitted should not exceed total
                     if total_patients is not None and admitted_patients is not None:
