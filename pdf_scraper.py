@@ -141,13 +141,16 @@ class HospitalDataScraper:
                     total_patients = None
                     admitted_patients = None
                     
-                    # Find all numeric values in the row
+                    # Find all numeric values in the row by splitting cell contents
                     numeric_values = []
                     for cell in row.values:
                         try:
                             cell_str = str(cell).strip()
-                            if cell_str.isdigit():
-                                numeric_values.append(int(cell_str))
+                            # Split by spaces and check each part for numbers
+                            parts = cell_str.split()
+                            for part in parts:
+                                if part.isdigit():
+                                    numeric_values.append(int(part))
                         except (ValueError, TypeError):
                             continue
                     
