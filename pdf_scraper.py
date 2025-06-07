@@ -137,42 +137,52 @@ class HospitalDataScraper:
             # Check if this row contains a hospital code
             for code, name in self.hospital_mapping.items():
                 if code in row_text:
-                    # Extract values from specific columns
+                    # Extract all numeric values from the entire row text
+                    import re
+                    all_numbers = re.findall(r'\b\d+\b', row_text)
+                    numeric_values = [int(num) for num in all_numbers]
+                    
+                    logging.info(f"Row text for {code}: '{row_text}'")
+                    logging.info(f"Found numbers: {numeric_values}")
+                    
                     total_patients = None
                     admitted_patients = None
                     
-                    # Find all numeric values in the row by splitting cell contents
-                    numeric_values = []
-                    for cell in row.values:
-                        try:
-                            cell_str = str(cell).strip()
-                            # Split by spaces and check each part for numbers
-                            parts = cell_str.split()
-                            for part in parts:
-                                if part.isdigit():
-                                    numeric_values.append(int(part))
-                        except (ValueError, TypeError):
-                            continue
-                    
-                    # Based on the table structure: [hospital_code, admitted, active, consults, total]
-                    # The admitted patients should be the first numeric value
-                    # The total patients should be the last numeric value
+                    # Based on the observed pattern: JPCH 1 0 0 | 1, RUH 27 24 2 | 53, SPH 17 17 0 | 34
+                    # Structure appears to be: [Hospital] [Admitted] [Active] [Consults] [Total]
                     if len(numeric_values) >= 4:
-                        admitted_patients = numeric_values[0]  # First numeric value is admitted
-                        total_patients = numeric_values[-1]   # Last numeric value is total
-                    elif len(numeric_values) >= 2:
-                        admitted_patients = numeric_values[0]  # First numeric value is admitted
-                        total_patients = numeric_values[-1]   # Last numeric value is total
+                        admitted_patients = numeric_values[0]  # First number after hospital code
+                        total_patients = numeric_values[-1]   # Last number (total)
+                        logging.info(f"Using pattern for 4+ numbers: admitted={admitted_patients}, total={total_patients}")
+                    elif len(numeric_values) == 3:
+                        # Might be missing one column, assume first is admitted, last is total
+                        admitted_patients = numeric_values[0]
+                        total_patients = numeric_values[-1]
+                        logging.info(f"Using pattern for 3 numbers: admitted={admitted_patients}, total={total_patients}")
+                    elif len(numeric_values) == 2:
+                        # Could be admitted and total
+                        admitted_patients = numeric_values[0]
+                        total_patients = numeric_values[1]
+                        logging.info(f"Using pattern for 2 numbers: admitted={admitted_patients}, total={total_patients}")
                     elif len(numeric_values) == 1:
+                        # Only total available
                         total_patients = numeric_values[0]
-                        admitted_patients = 0  # Default to 0 instead of None
+                        admitted_patients = 0
+                        logging.info(f"Using pattern for 1 number: admitted=0, total={total_patients}")
                     
-                    if total_patients is not None:
-                        # Ensure admitted_patients is never None
-                        if admitted_patients is None:
-                            admitted_patients = 0
+                    # Validation: admitted should not exceed total
+                    if total_patients is not None and admitted_patients is not None:
+                        if admitted_patients > total_patients:
+                            logging.warning(f"Admitted ({admitted_patients}) > Total ({total_patients}) for {code}, swapping values")
+                            admitted_patients, total_patients = total_patients, admitted_patients
                         
-                        logging.info(f"Extracted {code}: total={total_patients}, admitted={admitted_patients}, numeric_values={numeric_values}")
+                        # Additional validation for reasonable ranges
+                        if admitted_patients < 0:
+                            admitted_patients = 0
+                        if total_patients < 0:
+                            total_patients = 0
+                        
+                        logging.info(f"Final extraction for {code}: total={total_patients}, admitted={admitted_patients}")
                         return {
                             'hospital_code': code,
                             'hospital_name': name,
