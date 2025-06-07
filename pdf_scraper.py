@@ -138,22 +138,24 @@ class HospitalDataScraper:
                     total_patients = None
                     admitted_patients = None
                     
-                    # Extract from the rightmost column for total (typically column 4 in the Saskatchewan table)
-                    if len(row.values) >= 5:
+                    # Find all numeric values in the row
+                    numeric_values = []
+                    for cell in row.values:
                         try:
-                            total_patients = int(str(row.values[4]).strip())
+                            cell_str = str(cell).strip()
+                            if cell_str.isdigit():
+                                numeric_values.append(int(cell_str))
                         except (ValueError, TypeError):
-                            total_patients = self._extract_patient_count(row.values)
-                    else:
-                        total_patients = self._extract_patient_count(row.values)
+                            continue
                     
-                    # Extract from the first column for admitted patients (column 1 after Site name)
-                    if len(row.values) >= 2:
-                        try:
-                            admitted_patients = int(str(row.values[1]).strip())
-                        except (ValueError, TypeError):
-                            admitted_patients = None
-                    else:
+                    # Based on the table structure: [hospital_code, admitted, active, consults, total]
+                    # The admitted patients should be the first numeric value
+                    # The total patients should be the last numeric value
+                    if len(numeric_values) >= 2:
+                        admitted_patients = numeric_values[0]  # First numeric value is admitted
+                        total_patients = numeric_values[-1]   # Last numeric value is total
+                    elif len(numeric_values) == 1:
+                        total_patients = numeric_values[0]
                         admitted_patients = None
                     
                     if total_patients is not None:
