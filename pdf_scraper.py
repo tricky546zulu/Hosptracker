@@ -154,14 +154,22 @@ class HospitalDataScraper:
                     # Based on the table structure: [hospital_code, admitted, active, consults, total]
                     # The admitted patients should be the first numeric value
                     # The total patients should be the last numeric value
-                    if len(numeric_values) >= 2:
+                    if len(numeric_values) >= 4:
+                        admitted_patients = numeric_values[0]  # First numeric value is admitted
+                        total_patients = numeric_values[-1]   # Last numeric value is total
+                    elif len(numeric_values) >= 2:
                         admitted_patients = numeric_values[0]  # First numeric value is admitted
                         total_patients = numeric_values[-1]   # Last numeric value is total
                     elif len(numeric_values) == 1:
                         total_patients = numeric_values[0]
-                        admitted_patients = None
+                        admitted_patients = 0  # Default to 0 instead of None
                     
                     if total_patients is not None:
+                        # Ensure admitted_patients is never None
+                        if admitted_patients is None:
+                            admitted_patients = 0
+                        
+                        logging.info(f"Extracted {code}: total={total_patients}, admitted={admitted_patients}, numeric_values={numeric_values}")
                         return {
                             'hospital_code': code,
                             'hospital_name': name,
