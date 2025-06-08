@@ -17,7 +17,7 @@ def history():
 
 @app.route('/api/hospital-data')
 def get_hospital_data():
-    """Get latest hospital capacity data"""
+    """Get current hospital capacity data"""
     try:
         # Get latest data for each hospital
         hospitals = []
@@ -25,7 +25,6 @@ def get_hospital_data():
             latest = HospitalCapacity.query.filter_by(hospital_code=code).order_by(
                 HospitalCapacity.timestamp.desc()
             ).first()
-            
             if latest:
                 hospitals.append({
                     'hospital_code': latest.hospital_code,
@@ -34,14 +33,21 @@ def get_hospital_data():
                     'admitted_patients_in_ed': latest.admitted_patients_in_ed,
                     'timestamp': latest.timestamp.isoformat()
                 })
-        
-        return jsonify({
+
+        response = jsonify({
             'success': True,
-            'data': hospitals
+            'data': hospitals,
+            'timestamp': datetime.utcnow().isoformat()
         })
-        
+
+        # Add cache-busting headers
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+
+        return response
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/hospital-history/<hospital_code>')
 def get_hospital_history(hospital_code):
@@ -50,12 +56,12 @@ def get_hospital_history(hospital_code):
         # Get days parameter, default to 1 day (24 hours)
         days = request.args.get('days', 1, type=int)
         since = datetime.utcnow() - timedelta(days=days)
-        
+
         records = HospitalCapacity.query.filter(
             HospitalCapacity.hospital_code == hospital_code,
             HospitalCapacity.timestamp >= since
         ).order_by(HospitalCapacity.timestamp.desc()).all()
-        
+
         data = []
         for record in records:
             data.append({
@@ -64,13 +70,13 @@ def get_hospital_history(hospital_code):
                 'admitted_patients_in_ed': record.admitted_patients_in_ed,
                 'timestamp': record.timestamp.isoformat()
             })
-        
+
         return jsonify({
             'success': True,
             'hospital_code': hospital_code,
             'data': data
         })
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -79,7 +85,7 @@ def get_scraping_status():
     """Get the latest scraping status"""
     try:
         latest_log = ScrapingLog.query.order_by(ScrapingLog.timestamp.desc()).first()
-        
+
         if latest_log:
             return jsonify({
                 'success': True,
@@ -94,7 +100,7 @@ def get_scraping_status():
                 'message': 'No scraping logs available',
                 'timestamp': None
             })
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -105,18 +111,18 @@ def get_weather():
         api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
         if not api_key:
             return jsonify({'error': 'Weather API key not configured'}), 500
-            
+
         # Saskatoon coordinates
         lat = 52.1332
         lon = -106.6700
-        
+
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-        
+
         response = requests.get(url, timeout=10)
         response.raise_for_status()
-        
+
         weather_data = response.json()
-        
+
         return jsonify({
             'success': True,
             'data': {
@@ -131,7 +137,7 @@ def get_weather():
                 'city': weather_data['name']
             }
         })
-        
+
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Weather service unavailable: {str(e)}'}), 503
     except Exception as e:

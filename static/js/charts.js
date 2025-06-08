@@ -8,22 +8,22 @@ let previousData = {};
 // Initialize the dashboard
 function initializeDashboard() {
     console.log('Starting dashboard...');
-    
+
     try {
         // Load current data first
         loadHospitalData();
         updateScrapingStatus();
-        
+
         // Initialize capacity chart
         setTimeout(() => {
             initializeCapacityChart();
         }, 100);
-        
+
         // Initialize individual hospital charts
         setTimeout(() => {
             initializeMiniCharts();
         }, 200);
-        
+
     } catch (error) {
         console.error('Error starting dashboard:', error);
     }
@@ -33,11 +33,11 @@ function initializeDashboard() {
 function refreshData() {
     const refreshBtn = document.getElementById('refresh-btn');
     const icon = refreshBtn.querySelector('i');
-    
+
     // Show loading state
     refreshBtn.disabled = true;
     icon.style.animation = 'spin 1s linear infinite';
-    
+
     loadHospitalData().finally(() => {
         // Reset button state
         refreshBtn.disabled = false;
@@ -47,36 +47,37 @@ function refreshData() {
 
 // Load current hospital data
 async function loadHospitalData() {
-    try {
-        showLoading(true);
-        
-        const response = await fetch('/api/hospital-data');
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-            hospitalData = result.data;
-            updateHospitalCards();
-            updateCapacityChart();
-            updateLastUpdatedTime(result.last_updated);
-            hideAlerts();
-        } else {
-            showError('Failed to load hospital data: ' + (result.message || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Error loading hospital data:', error);
-        showError('Network error while loading hospital data');
-    } finally {
-        showLoading(false);
-    }
+    fetch('/api/hospital-data')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Hospital data received:', data);
+            if (data.success) {
+                hospitalData = data.data;
+
+                // Debug: Log each hospital's data
+                hospitalData.forEach(hospital => {
+                    console.log(`${hospital.hospital_code}: ${hospital.admitted_patients_in_ed} admitted, ${hospital.total_patients} total (${hospital.timestamp})`);
+                });
+
+                updateHospitalCards();
+                updateCapacityChart();
+                updateMiniCharts();
+            } else {
+                console.error('Failed to load hospital data:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading hospital data:', error);
+        });
 }
 
 // Update hospital data cards
 function updateHospitalCards() {
     const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
-    
+
     hospitals.forEach(hospital => {
         const data = hospitalData[hospital];
-        
+
         if (data && data.status === 'success') {
             updateHospitalCard(hospital, data);
         } else {
@@ -88,14 +89,14 @@ function updateHospitalCards() {
 // Update individual hospital card
 function updateHospitalCard(hospital, data) {
     const prefix = hospital.toLowerCase();
-    
+
     if (data) {
         const currentPatients = data.total_patients || 0;
         const previousPatients = previousData[hospital] || currentPatients;
-        
+
         // Update Total patients count
         document.getElementById(`${prefix}-total-patients`).textContent = currentPatients;
-        
+
         // Update percentage change
         const change = currentPatients - previousPatients;
         const changeElement = document.getElementById(`${prefix}-change`);
@@ -109,19 +110,19 @@ function updateHospitalCard(hospital, data) {
             changeElement.textContent = 'No change';
             changeElement.className = 'badge bg-light text-dark';
         }
-        
+
         // Update time since last update
         const timeSince = getTimeSinceUpdate(data.timestamp);
         document.getElementById(`${prefix}-time-since`).textContent = `Updated ${timeSince}`;
-        
+
         // Store current data as previous for next comparison
         previousData[hospital] = currentPatients;
-        
+
         // Add update animation
         const card = document.getElementById(`${prefix}-total-patients`).closest('.card');
         card.classList.add('data-update');
         setTimeout(() => card.classList.remove('data-update'), 500);
-        
+
     } else {
         // Show no data state
         document.getElementById(`${prefix}-total-patients`).textContent = '-';
@@ -146,19 +147,19 @@ function getCapacityLevel(patientCount) {
 // Get time since last update in plain language
 function getTimeSinceUpdate(timestamp) {
     if (!timestamp) return 'unknown time ago';
-    
+
     const now = new Date();
     const updateTime = new Date(timestamp);
     const diffMinutes = Math.floor((now - updateTime) / (1000 * 60));
-    
+
     if (diffMinutes < 1) return 'just now';
     if (diffMinutes === 1) return '1 minute ago';
     if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
-    
+
     const diffHours = Math.floor(diffMinutes / 60);
     if (diffHours === 1) return '1 hour ago';
     if (diffHours < 24) return `${diffHours} hours ago`;
-    
+
     return 'over a day ago';
 }
 
@@ -183,9 +184,9 @@ function initializeCapacityChart() {
         console.warn('Capacity chart element not found');
         return;
     }
-    
+
     const ctx = chartElement.getContext('2d');
-    
+
     capacityChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -242,7 +243,7 @@ function initializeCapacityChart() {
                             const hospital = context.label;
                             const hospitalCode = getHospitalCode(hospital);
                             const data = hospitalData[hospitalCode];
-                            
+
                             if (data) {
                                 return `Total Patients: ${data.total_patients || 0}`;
                             }
@@ -262,9 +263,9 @@ function initializeTrendsChart() {
         console.warn('Trends chart element not found');
         return;
     }
-    
+
     const ctx = chartElement.getContext('2d');
-    
+
     trendsChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -333,19 +334,19 @@ function initializeTrendsChart() {
 // Initialize individual hospital line charts
 function initializeMiniCharts() {
     console.log('Initializing hospital line charts...');
-    
+
     const hospitals = [
         { code: 'ruh', name: 'RUH', color: 'rgba(75, 192, 192, 1)' },
         { code: 'sph', name: 'SPH', color: 'rgba(255, 99, 132, 1)' },
         { code: 'sch', name: 'SCH', color: 'rgba(54, 162, 235, 1)' },
         { code: 'jpch', name: 'JPCH', color: 'rgba(255, 206, 86, 1)' }
     ];
-    
+
     hospitals.forEach(hospital => {
         const canvas = document.getElementById(`${hospital.code}-mini-chart`);
         if (canvas && canvas.getContext) {
             const ctx = canvas.getContext('2d');
-            
+
             miniCharts[hospital.code] = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -397,7 +398,7 @@ function initializeMiniCharts() {
                     }
                 }
             });
-            
+
             // Load data for this hospital
             loadHospitalChart(hospital.code.toUpperCase());
         }
@@ -407,28 +408,28 @@ function initializeMiniCharts() {
 // Update capacity chart with current data
 function updateCapacityChart() {
     if (!capacityChart) return;
-    
+
     const hospitals = ['RUH', 'SPH', 'SCH', 'JPCH'];
     const totalPatientsData = hospitals.map(hospital => {
         const data = hospitalData[hospital];
         return data ? (data.total_patients || 0) : 0;
     });
-    
+
     capacityChart.data.datasets[0].data = totalPatientsData;
-    
+
     // Update bar colors based on patient counts
     capacityChart.data.datasets[0].backgroundColor = totalPatientsData.map(count => {
         if (count >= 40) return 'rgba(220, 53, 69, 0.8)';
         if (count >= 20) return 'rgba(255, 193, 7, 0.8)';
         return 'rgba(25, 135, 84, 0.8)';
     });
-    
+
     capacityChart.data.datasets[0].borderColor = totalPatientsData.map(count => {
         if (count >= 40) return 'rgba(220, 53, 69, 1)';
         if (count >= 20) return 'rgba(255, 193, 7, 1)';
         return 'rgba(25, 135, 84, 1)';
     });
-    
+
     capacityChart.update();
 }
 
@@ -437,17 +438,17 @@ async function loadHospitalChart(hospitalCode) {
     try {
         const response = await fetch(`/api/hospital-history/${hospitalCode}`);
         const result = await response.json();
-        
+
         if (result.status === 'success' && result.data && result.data.length > 0) {
             const chart = miniCharts[hospitalCode.toLowerCase()];
             if (chart) {
                 // Filter out duplicate timestamps and smooth the data
                 const filteredData = [];
                 const seenTimestamps = new Set();
-                
+
                 // Sort data by timestamp to ensure chronological order (oldest first)
                 result.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                
+
                 // Process data to get unique entries by minute
                 result.data.forEach(item => {
                     const timeKey = new Date(item.timestamp).toISOString().slice(0, 16); // Group by minute
@@ -456,26 +457,26 @@ async function loadHospitalChart(hospitalCode) {
                         filteredData.push(item);
                     }
                 });
-                
+
                 // Get last 15 unique data points for cleaner display (most recent 15)
                 const recentData = filteredData.slice(-15);
-                
+
                 // Create consistent time labels in Saskatchewan time (UTC-6) 
                 const labels = recentData.map(item => {
                     const utcDate = new Date(item.timestamp);
                     // Direct UTC-6 conversion for Saskatchewan time
                     const saskHour = (utcDate.getUTCHours() - 6 + 24) % 24;
                     const saskMinute = utcDate.getUTCMinutes();
-                    
+
                     return `${saskHour.toString().padStart(2, '0')}:${saskMinute.toString().padStart(2, '0')}`;
                 });
-                
+
                 const data = recentData.map(item => item.total_patients || 0);
-                
+
                 chart.data.labels = labels;
                 chart.data.datasets[0].data = data;
                 chart.update();
-                
+
                 console.log(`Updated ${hospitalCode} chart with ${data.length} filtered points`);
             }
         }
@@ -493,16 +494,16 @@ async function updateScrapingStatus() {
     try {
         const response = await fetch('/api/scraping-status');
         const result = await response.json();
-        
+
         if (result.status === 'success') {
             const lastScrape = result.last_scrape;
             const statusElement = document.getElementById('scraping-status');
-            
+
             if (lastScrape.timestamp) {
                 const scrapeTime = new Date(lastScrape.timestamp);
                 const nowUTC = new Date();
                 const diffMinutes = Math.floor((nowUTC.getTime() - scrapeTime.getTime()) / (1000 * 60));
-                
+
                 // Saskatchewan is UTC-6 (no daylight saving) - only for display
                 const saskTime = new Date(scrapeTime.getTime() - (6 * 60 * 60 * 1000));
                 const timeString = saskTime.toLocaleString('en-CA', {
@@ -513,10 +514,10 @@ async function updateScrapingStatus() {
                     minute: '2-digit',
                     hour12: false
                 });
-                
+
                 let statusText = '';
                 let statusClass = '';
-                
+
                 if (lastScrape.status === 'success') {
                     statusText = `Last updated ${timeString}`;
                     statusClass = 'text-success-custom';
@@ -524,7 +525,7 @@ async function updateScrapingStatus() {
                     statusText = `Error at ${timeString}`;
                     statusClass = 'text-danger-custom';
                 }
-                
+
                 statusElement.textContent = `Status: ${statusText}`;
                 statusElement.className = statusClass;
             } else {
@@ -541,11 +542,11 @@ async function updateScrapingStatus() {
 // Update last updated time
 function updateLastUpdatedTime(timestamp) {
     if (!timestamp) return;
-    
+
     const updateTime = new Date(timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now - updateTime) / (1000 * 60));
-    
+
     let timeText = '';
     if (diffMinutes < 1) {
         timeText = 'Just now';
@@ -554,7 +555,7 @@ function updateLastUpdatedTime(timestamp) {
     } else {
         timeText = `${diffMinutes} minutes ago`;
     }
-    
+
     document.getElementById('update-time').textContent = timeText;
 }
 
@@ -574,13 +575,13 @@ function showLoading(show) {
 function showError(message) {
     const errorAlert = document.getElementById('error-alert');
     const errorMessage = document.getElementById('error-message');
-    
+
     errorMessage.textContent = message;
     errorAlert.classList.remove('d-none');
-    
+
     // Re-initialize feather icons for the alert
     feather.replace();
-    
+
     // Auto-hide after 10 seconds
     setTimeout(() => {
         errorAlert.classList.add('d-none');
@@ -591,7 +592,7 @@ function showError(message) {
 function showNoDataAlert() {
     const noDataAlert = document.getElementById('no-data-alert');
     noDataAlert.classList.remove('d-none');
-    
+
     // Re-initialize feather icons
     feather.replace();
 }
