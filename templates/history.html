@@ -18,7 +18,7 @@
 </div>
 
 <!-- Date Range Selector -->
-<div class="row mb-3">
+<div class="row mb-5">
     <div class="col-md-4">
         <label for="dateRangeSelect" class="form-label">Select Date Range:</label>
         <select class="form-select" id="dateRangeSelect">
@@ -31,25 +31,25 @@
 </div>
 
 <!-- Historical Chart -->
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-6">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="trending-up" class="me-2"></i>
                 <h5 class="mb-0">7-Day Patient Count Trends</h5>
             </div>
-            <div class="px-3 pt-3 pb-2 border-bottom"> <!-- Changed pb-0 to pb-2 for more space -->
+            <div class="px-4 pt-4 pb-3 border-bottom">
                 <small class="text-muted">Toggle Hospitals:</small>
-                <div class="d-flex flex-wrap justify-content-start mt-1 mb-2">
-                    <div class="form-check form-check-inline me-3">
+                <div class="d-flex flex-wrap justify-content-start mt-2 mb-3">
+                    <div class="form-check form-check-inline me-4">
                         <input class="form-check-input" type="checkbox" id="toggleRUH" value="RUH" checked>
                         <label class="form-check-label" for="toggleRUH">RUH</label>
                     </div>
-                    <div class="form-check form-check-inline me-3">
+                    <div class="form-check form-check-inline me-4">
                         <input class="form-check-input" type="checkbox" id="toggleSPH" value="SPH" checked>
                         <label class="form-check-label" for="toggleSPH">SPH</label>
                     </div>
-                    <div class="form-check form-check-inline me-3">
+                    <div class="form-check form-check-inline me-4">
                         <input class="form-check-input" type="checkbox" id="toggleSCH" value="SCH" checked>
                         <label class="form-check-label" for="toggleSCH">SCH</label>
                     </div>
@@ -59,7 +59,7 @@
                     </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <canvas id="historicalChart" height="300"></canvas>
             </div>
         </div>
@@ -67,14 +67,14 @@
 </div>
 
 <!-- Historical Data Tables -->
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card">
+<div class="row g-4 mb-6">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="activity" class="me-2"></i>
                 <h5 class="mb-0">RUH - Royal University Hospital</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div id="ruh-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
@@ -82,13 +82,13 @@
         </div>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="activity" class="me-2"></i>
                 <h5 class="mb-0">SPH - St. Paul's Hospital</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div id="sph-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
@@ -96,13 +96,13 @@
         </div>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="activity" class="me-2"></i>
                 <h5 class="mb-0">SCH - Saskatoon City Hospital</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div id="sch-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
@@ -110,13 +110,13 @@
         </div>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="activity" class="me-2"></i>
                 <h5 class="mb-0">JPCH - Jim Pattison Children's Hospital</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div id="jpch-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
@@ -126,14 +126,14 @@
 </div>
 
 <!-- Summary Statistics -->
-<div class="row g-4 mt-4">
+<div class="row g-4 mt-5">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center">
                 <i data-feather="bar-chart-2" class="me-2"></i>
                 <h5 class="mb-0">7-Day Summary Statistics</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="table-responsive">
                     <table class="table table-hover" id="summary-table">
                         <thead>

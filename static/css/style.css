@@ -351,6 +351,40 @@ canvas {
     backdrop-filter: blur(10px);
 }
 
+/* Spacing utilities */
+.mb-6 {
+    margin-bottom: 4rem !important;
+}
+
+.mt-6 {
+    margin-top: 4rem !important;
+}
+
+/* Enhanced table spacing */
+.table th, .table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+}
+
+.table-responsive {
+    border-radius: 10px;
+}
+
+/* Historical page specific improvements */
+.form-check-inline {
+    margin-right: 1.5rem !important;
+}
+
+.form-check-label {
+    padding-left: 0.5rem;
+    font-weight: 500;
+}
+
+/* Card body enhanced padding */
+.card-body.p-4 {
+    padding: 2rem !important;
+}
+
 /* Responsive design improvements */
 @media (max-width: 768px) {
     .header-section h1 {
@@ -368,6 +402,15 @@ canvas {
     .btn {
         padding: 0.6rem 1.2rem;
         font-size: 0.9rem;
+    }
+    
+    .mb-6 {
+        margin-bottom: 2rem !important;
+    }
+    
+    .form-check-inline {
+        margin-right: 1rem !important;
+        margin-bottom: 0.5rem;
     }
 }
 
