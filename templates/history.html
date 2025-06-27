@@ -78,6 +78,10 @@
                 <div id="ruh-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
+                <!-- Mobile-friendly summary for small screens -->
+                <div id="ruh-mobile-summary" class="d-block d-md-none mt-3">
+                    <p class="text-muted">Loading data...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -91,6 +95,10 @@
             <div class="card-body p-4">
                 <div id="sph-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
+                </div>
+                <!-- Mobile-friendly summary for small screens -->
+                <div id="sph-mobile-summary" class="d-block d-md-none mt-3">
+                    <p class="text-muted">Loading data...</p>
                 </div>
             </div>
         </div>
@@ -106,6 +114,10 @@
                 <div id="sch-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
                 </div>
+                <!-- Mobile-friendly summary for small screens -->
+                <div id="sch-mobile-summary" class="d-block d-md-none mt-3">
+                    <p class="text-muted">Loading data...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -119,6 +131,10 @@
             <div class="card-body p-4">
                 <div id="jpch-history" class="table-responsive">
                     <p class="text-muted">Loading historical data...</p>
+                </div>
+                <!-- Mobile-friendly summary for small screens -->
+                <div id="jpch-mobile-summary" class="d-block d-md-none mt-3">
+                    <p class="text-muted">Loading data...</p>
                 </div>
             </div>
         </div>
@@ -356,20 +372,38 @@ function updateChartVisibility() {
 
 function updateHospitalTable(hospitalCode, data) {
     const container = document.getElementById(`${hospitalCode}-history`);
+    const mobileContainer = document.getElementById(`${hospitalCode}-mobile-summary`);
     
     if (data.length === 0) {
         container.innerHTML = '<p class="text-muted">No historical data available</p>';
+        if (mobileContainer) {
+            mobileContainer.innerHTML = '<p class="text-muted">No historical data available</p>';
+        }
         return;
     }
     
+    // Desktop table
     let tableHTML = `
-        <table class="table table-sm">
+        <table class="table table-sm d-none d-md-table">
             <thead>
                 <tr>
                     <th>Date/Time</th>
                     <th>Total Patients</th>
                     <th>Admitted</th>
                     <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // Mobile-optimized table
+    let mobileTableHTML = `
+        <table class="table table-sm d-table d-md-none">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Total</th>
+                    <th>Admitted</th>
                 </tr>
             </thead>
             <tbody>
@@ -397,6 +431,7 @@ function updateHospitalTable(hospitalCode, data) {
             }
         }
         
+        // Desktop row
         tableHTML += `
             <tr>
                 <td><small>${saskTime.toLocaleDateString('en-CA')} ${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small></td>
@@ -405,10 +440,43 @@ function updateHospitalTable(hospitalCode, data) {
                 <td><small class="${changeClass}">${change}</small></td>
             </tr>
         `;
+        
+        // Mobile row (simplified)
+        mobileTableHTML += `
+            <tr>
+                <td><small>${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small></td>
+                <td><strong>${item.total_patients}</strong></td>
+                <td><strong>${admittedInED}</strong></td>
+            </tr>
+        `;
     });
     
     tableHTML += '</tbody></table>';
-    container.innerHTML = tableHTML;
+    mobileTableHTML += '</tbody></table>';
+    
+    container.innerHTML = tableHTML + mobileTableHTML;
+    
+    // Update mobile summary
+    if (mobileContainer && data.length > 0) {
+        const latest = data[data.length - 1];
+        const saskTime = new Date(new Date(latest.timestamp).getTime() - (6 * 60 * 60 * 1000));
+        mobileContainer.innerHTML = `
+            <div class="row text-center">
+                <div class="col-4">
+                    <small class="text-muted">Current</small><br>
+                    <strong class="fs-5">${latest.total_patients}</strong>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Admitted</small><br>
+                    <strong class="fs-5">${latest.admitted_patients_in_ed || 0}</strong>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Updated</small><br>
+                    <small>${saskTime.toLocaleTimeString('en-CA', {hour: '2-digit', minute: '2-digit', hour12: false})}</small>
+                </div>
+            </div>
+        `;
+    }
 }
 
 function filterDataAnomalies(data, hospital) {

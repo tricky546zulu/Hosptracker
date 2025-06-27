@@ -412,6 +412,78 @@ canvas {
         margin-right: 1rem !important;
         margin-bottom: 0.5rem;
     }
+    
+    /* Historical page mobile improvements */
+    .card-body.p-4 {
+        padding: 1rem !important;
+    }
+    
+    /* Stack hospital filter checkboxes vertically */
+    .d-flex.flex-wrap.justify-content-start {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    .form-check-inline {
+        display: block !important;
+        margin-right: 0 !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Mobile table improvements */
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem 0.25rem;
+        white-space: nowrap;
+    }
+    
+    .table th {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .table td small {
+        font-size: 0.7rem;
+    }
+    
+    /* Summary table mobile layout */
+    #summary-table {
+        font-size: 0.75rem;
+    }
+    
+    #summary-table th, #summary-table td {
+        padding: 0.75rem 0.25rem;
+        vertical-align: middle;
+    }
+    
+    #summary-table .badge {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.8rem;
+        min-width: 35px;
+    }
+    
+    /* Chart container mobile adjustments */
+    #historicalChart {
+        height: 250px !important;
+    }
+    
+    /* Hospital cards mobile layout */
+    .col-md-6.mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* Date range selector mobile */
+    .col-md-4 {
+        margin-bottom: 1rem;
+    }
+    
+    .form-select {
+        font-size: 0.9rem;
+        padding: 0.6rem 0.8rem;
+    }
 }
 
 @media (max-width: 576px) {
@@ -426,6 +498,79 @@ canvas {
     
     .display-4 {
         font-size: 2.5rem !important;
+    }
+    
+    /* Extra small mobile improvements */
+    .header-section {
+        padding: 1rem;
+    }
+    
+    .card-body.p-4 {
+        padding: 0.75rem !important;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-header h5 {
+        font-size: 0.95rem;
+    }
+    
+    /* Make buttons full width on very small screens */
+    .btn-outline-secondary {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    /* Adjust header layout for very small screens */
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    /* Historical table improvements for very small screens */
+    .table {
+        font-size: 0.7rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.4rem 0.2rem;
+    }
+    
+    /* Hide some columns on very small screens */
+    .table th:nth-child(4), .table td:nth-child(4) {
+        display: none;
+    }
+    
+    /* Summary table very small screen adjustments */
+    #summary-table th:nth-child(6), #summary-table td:nth-child(6),
+    #summary-table th:nth-child(7), #summary-table td:nth-child(7) {
+        display: none;
+    }
+    
+    #summary-table {
+        font-size: 0.7rem;
+    }
+    
+    /* Chart height for very small screens */
+    #historicalChart {
+        height: 200px !important;
+    }
+    
+    /* Form controls improvements */
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Reduce margins for better space utilization */
+    .mb-5 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .mt-5 {
+        margin-top: 1.5rem !important;
     }
 }
 
