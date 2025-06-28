@@ -39,7 +39,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uv sync"
+args = "pip install ."
 
 [[ports]]
 localPort = 5000
