@@ -2,3 +2,4 @@ Flask
 Flask-SQLAlchemy
 PyPDF2
 APScheduler
+psycopg2-binary
