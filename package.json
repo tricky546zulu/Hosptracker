@@ -4,7 +4,7 @@
   "description": "Saskatchewan Hospital Emergency Department Monitor",
   "main": "main.py",
   "scripts": {
-    "dev": "python main.py",
+    "dev": "python3 main.py",
     "start": "gunicorn --bind 0.0.0.0:5000 main:app"
   },
   "dependencies": {},
