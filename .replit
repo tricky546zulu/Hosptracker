@@ -13,16 +13,16 @@ runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
-mode = "parallel"
+mode = "sequential"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start application"
+args = "install_dependencies"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "install_dependencies"
+args = "Start application"
 
 [[workflows.workflow]]
 name = "Start application"
