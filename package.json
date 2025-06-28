@@ -1,0 +1,12 @@
+{
+  "name": "saskatchewan-hospital-monitor",
+  "version": "1.0.0",
+  "description": "Saskatchewan Hospital Emergency Department Monitor",
+  "main": "main.py",
+  "scripts": {
+    "dev": "python main.py",
+    "start": "gunicorn --bind 0.0.0.0:5000 main:app"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
