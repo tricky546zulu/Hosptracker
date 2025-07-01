@@ -1,4 +1,4 @@
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, send_from_directory
 from datetime import datetime, timedelta
 import requests
 import os
@@ -155,3 +155,8 @@ def manual_scrape():
             return jsonify({'success': False, 'message': 'Scraping failed'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/ads.txt')
+def ads_txt():
+    """Serve ads.txt file for Google AdSense verification"""
+    return send_from_directory('.', 'ads.txt', mimetype='text/plain')
