@@ -1,5 +1,6 @@
 # Forcing a fresh build on Render - v2
-# Use the full, official Python image to ensure all system libraries are present
+# Use the full, official Python image to ensure all system libraries are
+      present
 FROM python:3.11
 
 # Install all Camelot system dependencies, including Ghostscript and Tkinter
