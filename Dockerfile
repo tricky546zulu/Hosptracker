@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y ghostscript
 WORKDIR /app
 
 # Copy the requirements file
-COPY requirements.txt .
+COPY requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
