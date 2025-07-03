@@ -19,7 +19,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         # Start the scheduler only once when the app is initialized
-        start_scheduler()
+        start_scheduler(app) # Pass the app instance here
 
     return app
 
