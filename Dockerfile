@@ -1,14 +1,5 @@
-# Forcing a fresh build on Render - v3
-# Use the full, official Python image
-FROM python:3.11
-
-# Install system dependencies and then immediately verify the installation
-RUN apt-get update && \
-    apt-get install -y ghostscript tk-dev python3-tk && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "---- Verifying Ghostscript Installation ----" && \
-    which gs && \
-    echo "---- Ghostscript Path Found ----"
+# Use the official, slim Python image
+FROM python:3.11-slim
 
 # Set the working directory
 WORKDIR /app
