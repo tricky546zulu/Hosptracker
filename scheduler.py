@@ -1,43 +1,44 @@
-import logging
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from pdf_scraper import run_scraping
+import logging
 
-scheduler = None
+# Set up logging for APScheduler
+logging.basicConfig()
+logging.getLogger('apscheduler').setLevel(logging.INFO)
 
-def start_scheduler():
-    """Start the background scheduler for automatic data updates"""
-    global scheduler
-    
-    if scheduler is None:
-        scheduler = BackgroundScheduler()
-        
-        # Schedule scraping every hour
-        scheduler.add_job(
-            func=run_scraping,
-            trigger=IntervalTrigger(hours=1),
-            id='hospital_data_scraping',
-            name='Hospital Data Scraping',
-            replace_existing=True
-        )
-        
-        # Run initial scraping after 10 seconds
-        from datetime import datetime, timedelta
-        scheduler.add_job(
-            func=run_scraping,
-            trigger='date',
-            run_date=datetime.now() + timedelta(seconds=10),
-            id='initial_scraping',
-            name='Initial Hospital Data Scraping'
-        )
-        
-        scheduler.start()
-        logging.info("Hospital data scraping scheduler started")
+# Import app here, but be careful to avoid circular imports
+# We will pass the app instance to the scheduler functions
+# from main.py to ensure it has access to the context.
 
-def stop_scheduler():
-    """Stop the scheduler"""
-    global scheduler
-    if scheduler:
-        scheduler.shutdown()
-        scheduler = None
-        logging.info("Scheduler stopped")
+scheduler = BackgroundScheduler()
+
+def start_scheduler(app_instance):
+    """
+    Starts the APScheduler to run the hospital data scraping job.
+    """
+    print("Hospital data scraping scheduler started")
+
+    # Add the initial scraping job to run immediately
+    # Wrap run_scraping in a function that provides the app context
+    def run_scraping_with_context():
+        with app_instance.app_context():
+            run_scraping()
+
+    scheduler.add_job(
+        run_scraping_with_context,
+        'date',
+        run_date='now',
+        id='initial_scraping',
+        name='Initial Hospital Data Scraping'
+    )
+
+    # Schedule the job to run every 12 hours
+    scheduler.add_job(
+        run_scraping_with_context,
+        'interval',
+        hours=12,
+        id='hospital_data_scraping',
+        name='Hospital Data Scraping'
+    )
+
+    scheduler.start()
