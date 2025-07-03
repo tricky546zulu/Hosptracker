@@ -1,22 +1,25 @@
-from datetime import datetime
-from app import db
+from flask import Flask
+from extensions import db
+from routes import main_routes
+from scheduler import start_scheduler
+import os
 
-class HospitalCapacity(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    hospital_code = db.Column(db.String(10), nullable=False)
-    hospital_name = db.Column(db.String(100), nullable=False)
-    total_patients = db.Column(db.Integer)
-    admitted_patients_in_ed = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<HospitalCapacity {self.hospital_code}: {self.total_patients} patients>'
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///default.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-class ScrapingLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), nullable=False)
-    message = db.Column(db.Text)
-    
-    def __repr__(self):
-        return f'<ScrapingLog {self.timestamp}: {self.status}>'
+# Initialize the db with the app
+db.init_app(app)
+
+app.register_blueprint(main_routes)
+
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+        start_scheduler()
+    app.run(debug=True)
+else:
+    # Ensure the app context is available for the scheduler in production
+    with app.app_context():
+        db.create_all()
+        start_scheduler()
