@@ -1,14 +1,11 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from pdf_scraper import run_scraping
 import logging
+from datetime import datetime # Import datetime
 
 # Set up logging for APScheduler
 logging.basicConfig()
 logging.getLogger('apscheduler').setLevel(logging.INFO)
-
-# Import app here, but be careful to avoid circular imports
-# We will pass the app instance to the scheduler functions
-# from main.py to ensure it has access to the context.
 
 scheduler = BackgroundScheduler()
 
@@ -27,7 +24,7 @@ def start_scheduler(app_instance):
     scheduler.add_job(
         run_scraping_with_context,
         'date',
-        run_date='now',
+        run_date=datetime.now(), # Changed 'now' to datetime.now()
         id='initial_scraping',
         name='Initial Hospital Data Scraping'
     )
