@@ -1,8 +1,11 @@
-# Use an official, public Python image
-FROM python:3.11-slim
+# Forcing a fresh build on Render - v2
+# Use the full, official Python image to ensure all system libraries are
+      present
+FROM python:3.11
 
-# Install Ghostscript
-RUN apt-get update && apt-get install -y ghostscript
+# Install all Camelot system dependencies, including Ghostscript and Tkinter
+RUN apt-get update && apt-get install -y ghostscript tk-dev python3-tk && rm -
+      rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
