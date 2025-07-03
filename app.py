@@ -1,30 +1,29 @@
-from flask import Flask
-from models import db
-from routes import main_routes
-from scheduler import start_scheduler
 import os
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 
-def create_app():
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///default.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+class Base(DeclarativeBase):
+    pass
 
-    # Initialize extensions
-    db.init_app(app)
+db = SQLAlchemy(model_class=Base)
 
-    # Register blueprints
-    app.register_blueprint(main_routes)
+# Create Flask app
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", "dev-key")
 
-    # It's important to create tables within the app context
-    with app.app_context():
-        db.create_all()
-        # Start the scheduler only once when the app is initialized
-        start_scheduler()
+# Database configuration
+#app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
+#app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+  #  "pool_recycle": 300,
+   # "pool_pre_ping": True,
+#}
+import os
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///hospitals.db')
 
-    return app
+# Initialize database
+db.init_app(app)
 
-app = create_app()
-
-if __name__ == "__main__":
-    # This block is for local development
-    app.run(debug=True)
+with app.app_context():
+    from models import HospitalCapacity, ScrapingLog
+    db.create_all()
