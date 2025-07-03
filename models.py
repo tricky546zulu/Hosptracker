@@ -1,6 +1,5 @@
 from flask import Flask
 from extensions import db
-from scheduler import start_scheduler
 import os
 
 app = Flask(__name__)
