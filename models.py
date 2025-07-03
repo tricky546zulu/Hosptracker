@@ -1,6 +1,5 @@
 from flask import Flask
 from extensions import db
-from routes import main_routes
 from scheduler import start_scheduler
 import os
 
