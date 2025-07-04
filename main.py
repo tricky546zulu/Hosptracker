@@ -11,12 +11,8 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        # We import models here to avoid circular import issues
-        from models import Hospital, HospitalData, ScrapingLog
+        from models import Hospital, HospitalData
         db.create_all()
-
-        from scheduler import start_scheduler
-        start_scheduler(app)
 
     @app.route('/')
     def index():
@@ -67,18 +63,6 @@ def create_app():
             'total_patients': d.total_patients,
             'waiting_for_inpatient_bed': d.waiting_for_inpatient_bed
         } for d in history_data])
-
-    @app.route('/api/scraping-status')
-    def get_scraping_status():
-        from models import ScrapingLog
-        latest_log = ScrapingLog.query.order_by(ScrapingLog.timestamp.desc()).first()
-        if latest_log:
-            return jsonify({
-                'last_update': latest_log.timestamp.isoformat(),
-                'status': latest_log.status,
-                'message': latest_log.message
-            })
-        return jsonify({'status': 'No scraping attempts logged yet.'})
 
     @app.route('/api/weather')
     def get_weather():
