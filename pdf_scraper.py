@@ -5,13 +5,14 @@ import pdfplumber
 from io import BytesIO
 from datetime import datetime
 from models import db, Hospital, HospitalData, ScrapingLog
-import certifi # Import certifi
+import certifi  # Import the certifi library
 
 def log_scraping_attempt(app, status, message):
     """Logs the result of a scraping attempt to the database."""
     with app.app_context():
         try:
-            log_entry = ScrapingLog(timestamp=datetime.utcnow(), status=status, message=message)
+            log_entry = ScrapingLog(timestamp=datetime.utcnow(), status=status,
+message=message)
             db.session.add(log_entry)
             db.session.commit()
         except Exception as e:
@@ -26,7 +27,7 @@ def run_scraping(app):
     print("Starting hospital data scraping with pdfplumber")
 
     try:
-        # Use certifi to provide the SSL certificate bundle
+        # Explicitly use certifi's certificate bundle for verification
         response = requests.get(pdf_url, verify=certifi.where())
         response.raise_for_status()
         pdf_file = BytesIO(response.content)
