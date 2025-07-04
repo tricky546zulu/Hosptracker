@@ -1,104 +1,107 @@
-import pdfplumber
+import os
+import re
 import requests
+import pdfplumber
 from io import BytesIO
 from datetime import datetime
-from models import db, HospitalData, ScrapingLog
-import re # Import regex for parsing hospital codes
+from main import app, db
+from models import Hospital, HospitalData, ScrapingLog
+
+def log_scraping_attempt(status, message):
+    """Logs the result of a scraping attempt to the database."""
+    with app.app_context():
+        try:
+            log_entry = ScrapingLog(timestamp=datetime.utcnow(), status=status, message=message)
+            db.session.add(log_entry)
+            db.session.commit()
+        except Exception as e:
+            # If logging fails, print the error to the console
+            print(f"Failed to log scraping result: {e}")
+            db.session.rollback()
 
 def run_scraping():
     """
-    Scrapes hospital capacity data from the eHealth Saskatchewan PDF report
-    using pdfplumber.
+    Scrapes hospital capacity data from a PDF and stores it in the database.
     """
-    pdf_url = "https://www.ehealthsask.ca/reporting/Documents/SaskatoonHospitalBedCapacity.pdf"
-    scraping_time = datetime.utcnow()
-    status = "success"
-    message = "Scraping completed successfully."
-
-    # Updated hospital codes to match the format in the PDF (e.g., "RUH")
-    # We will extract the code from the first cell of the row
-    valid_hospital_codes = ["RUH", "SPH", "SCH", "JPCH"]
+    pdf_url = "https://www.saskhealthauthority.ca/sites/default/files/2024-07/ER-Capacity-Report.pdf"
+    print("Starting hospital data scraping with pdfplumber")
 
     try:
-        print("Starting hospital data scraping with pdfplumber")
-
-        # Download the PDF content
         response = requests.get(pdf_url)
-        response.raise_for_status()  # Raise an exception for bad status codes
+        response.raise_for_status()
         pdf_file = BytesIO(response.content)
 
-        all_data = []
-
         with pdfplumber.open(pdf_file) as pdf:
-            # Iterate through all pages to find the table
-            for page in pdf.pages:
-                # Extract tables from the page
-                tables = page.extract_tables()
+            page = pdf.pages[0]
+            text = page.extract_text()
 
-                for table in tables:
-                    # Iterate through rows to find data
-                    for row in table:
-                        # Clean row data by removing None and stripping whitespace
-                        cleaned_row = [cell.strip() if cell else "" for cell in row]
+        if not text:
+            raise ValueError("Could not extract text from the PDF.")
 
-                        # Check if the first cell contains a hospital code followed by a colon
-                        # e.g., "JPCH:"
-                        if cleaned_row and cleaned_row[0]:
-                            match = re.match(r'([A-Z]{3,4}):', cleaned_row[0])
-                            if match:
-                                hospital_code = match.group(1)
-                                if hospital_code in valid_hospital_codes:
-                                    # Extract numerical data from the rest of the row
-                                    # Assuming the last number is the total Pts in ED
-                                    numerical_values = []
-                                    for cell in cleaned_row[1:]: # Start from the second cell
-                                        try:
-                                            numerical_values.append(int(cell))
-                                        except ValueError:
-                                            continue # Skip non-integer cells
+        # Use regex to find the "Last Update" timestamp
+        last_update_match = re.search(r"Last Update: (\w+\s+\d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [ap]\.m\.)", text)
+        if not last_update_match:
+            raise ValueError("Could not find the 'Last Update' timestamp in the PDF.")
 
-                                    if numerical_values:
-                                        patient_count = numerical_values[-1] # Take the last numerical value
-                                        all_data.append({
-                                            "hospital_code": hospital_code,
-                                            "patient_count": patient_count,
-                                            "timestamp": scraping_time
-                                        })
+        last_update_str = last_update_match.group(1)
+        last_update = datetime.strptime(last_update_str, "%B %d, %Y, %I:%M:%S %p")
 
-        if not all_data:
-            raise ValueError("Could not find any valid hospital data in the PDF.")
+        # Define the expected hospital names and their abbreviations
+        hospital_mapping = {
+            "St. Paul's Hospital": "SPH",
+            "Saskatoon City Hospital": "SCH",
+            "Jim Pattison Children's Hospital": "JPCH",
+            "Royal University Hospital": "RUH"
+        }
 
-        # Save data to the database
-        for data in all_data:
-            hospital_data = HospitalData(
-                hospital_code=data["hospital_code"],
-                patient_count=data["patient_count"],
-                timestamp=data["timestamp"]
-            )
-            db.session.add(hospital_data)
+        data_found = False
+        with app.app_context():
+            for full_name, code in hospital_mapping.items():
+                # Regex to find the data for each hospital
+                pattern = re.compile(rf"{re.escape(full_name)}\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)")
+                match = pattern.search(text)
 
-        db.session.commit()
-        print(f"Successfully scraped and saved data for {len(all_data)} hospitals.")
+                if match:
+                    data_found = True
+                    inpatient_beds, overcapacity_beds, total_patients, waiting_for_inpatient_bed = map(int, match.groups())
+
+                    hospital = Hospital.query.filter_by(code=code).first()
+                    if not hospital:
+                        hospital = Hospital(code=code, name=full_name)
+                        db.session.add(hospital)
+                        db.session.commit()
+
+                    # Check if data for this timestamp already exists
+                    existing_data = HospitalData.query.filter_by(
+                        hospital_id=hospital.id,
+                        timestamp=last_update
+                    ).first()
+
+                    if not existing_data:
+                        hospital_data = HospitalData(
+                            hospital_id=hospital.id,
+                            timestamp=last_update,
+                            inpatient_beds=inpatient_beds,
+                            overcapacity_beds=overcapacity_beds,
+                            total_patients=total_patients,
+                            waiting_for_inpatient_bed=waiting_for_inpatient_bed
+                        )
+                        db.session.add(hospital_data)
+
+            if not data_found:
+                raise ValueError("Could not find any valid hospital data in the PDF.")
+
+            db.session.commit()
+            log_message = f"Successfully scraped data for timestamp: {last_update_str}"
+            print(log_message)
+            log_scraping_attempt("success", log_message)
 
     except Exception as e:
-        status = "error"
-        message = f"Error scraping hospital data: {e}"
-        print(message)
-        db.session.rollback()
-
-    finally:
-        # Log the scraping attempt
-        try:
-            log_entry = ScrapingLog(timestamp=scraping_time, status=status, message=message)
-            db.session.add(log_entry)
-            db.session.commit()
-        except Exception as log_e:
-            print(f"Failed to log scraping result: {log_e}")
+        error_message = f"Error scraping hospital data: {e}"
+        print(error_message)
+        log_scraping_attempt("error", error_message)
+        with app.app_context():
             db.session.rollback()
 
-if __name__ == '__main__':
-    # This allows running the scraper manually for testing
-    # Requires the Flask app context to be set up
-    from main import app
-    with app.app_context():
-        run_scraping()
+if __name__ == "__main__":
+    run_scraping()
