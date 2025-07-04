@@ -1,28 +1,107 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+from flask import Flask, jsonify, render_template, request
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
+import os
+import requests
 
-# Install system dependencies required for pdfplumber and other libraries
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libmagic-dev \
-    libpoppler-cpp-dev \
-    ghostscript \
-    && rm -rf /var/lib/apt/lists/*
+db = SQLAlchemy()
 
-# Set the working directory in the container
-WORKDIR /app
+def create_app():
+    """Creates and configures a Flask application."""
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///hospitals.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
 
-# Copy the dependencies file to the working directory
-COPY requirements.txt .
+    with app.app_context():
+        from models import Hospital, HospitalData, ScrapingLog
+        db.create_all()
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+        # Import and start the scheduler after the app is created
+        from scheduler import start_scheduler
+        start_scheduler(app)
 
-# Copy the rest of the application's code to the working directory
-COPY . .
+    @app.route('/')
+    def index():
+        return render_template('index.html')
 
-# Make port 10000 available to the world outside this container
-EXPOSE 10000
+    @app.route('/history')
+    def history():
+        return render_template('history.html')
 
-# Run the application
-CMD ["gunicorn", "main:create_app()", "--bind", "0.0.0.0:10000"]
+    @app.route('/api/hospital-data')
+    def get_hospital_data():
+        from models import Hospital, HospitalData
+        hospitals = Hospital.query.all()
+        data = []
+        for hospital in hospitals:
+            latest_data = HospitalData.query.filter_by(hospital_id=hospital.id).order_by(HospitalData.timestamp.desc()).first()
+            if latest_data:
+                data.append({
+                    'code': hospital.code,
+                    'name': hospital.name,
+                    'timestamp': latest_data.timestamp.isoformat(),
+                    'inpatient_beds': latest_data.inpatient_beds,
+                    'overcapacity_beds': latest_data.overcapacity_beds,
+                    'total_patients': latest_data.total_patients,
+                    'waiting_for_inpatient_bed': latest_data.waiting_for_inpatient_bed
+                })
+        return jsonify(data)
+
+    @app.route('/api/hospital-history/<hospital_code>')
+    def get_hospital_history(hospital_code):
+        from models import Hospital, HospitalData
+        days = request.args.get('days', 7, type=int)
+        from datetime import datetime, timedelta
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+
+        hospital = Hospital.query.filter_by(code=hospital_code).first()
+        if not hospital:
+            return jsonify({"error": "Hospital not found"}), 404
+
+        history_data = HospitalData.query.filter(
+            HospitalData.hospital_id == hospital.id,
+            HospitalData.timestamp >= start_date
+        ).order_by(HospitalData.timestamp.asc()).all()
+
+        return jsonify([{
+            'timestamp': d.timestamp.isoformat(),
+            'total_patients': d.total_patients,
+            'waiting_for_inpatient_bed': d.waiting_for_inpatient_bed
+        } for d in history_data])
+
+    @app.route('/api/scraping-status')
+    def get_scraping_status():
+        from models import ScrapingLog
+        latest_log = ScrapingLog.query.order_by(ScrapingLog.timestamp.desc()).first()
+        if latest_log:
+            return jsonify({
+                'last_update': latest_log.timestamp.isoformat(),
+                'status': latest_log.status,
+                'message': latest_log.message
+            })
+        return jsonify({'status': 'No scraping attempts logged yet.'})
+
+    @app.route('/api/weather')
+    def get_weather():
+        api_key = os.environ.get('WEATHER_API_KEY')
+        if not api_key:
+            return jsonify({"error": "Weather API key not configured"}), 500
+
+        lat = 52.1332
+        lon = -106.6700
+        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
+
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            return jsonify({"error": str(e)}), 500
+
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
