@@ -1,30 +1,28 @@
-from flask import Flask
-from models import db
-from routes import main_routes
-from scheduler import start_scheduler
-import os
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
 
-def create_app():
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///default.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Install system dependencies required for pdfplumber and other libraries
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libmagic-dev \
+    libpoppler-cpp-dev \
+    ghostscript \
+    && rm -rf /var/lib/apt/lists/*
 
-    # Initialize extensions
-    db.init_app(app)
+# Set the working directory in the container
+WORKDIR /app
 
-    # Register blueprints
-    app.register_blueprint(main_routes)
+# Copy the dependencies file to the working directory
+COPY requirements.txt .
 
-    # It's important to create tables within the app context
-    with app.app_context():
-        db.create_all()
-        # Start the scheduler only once when the app is initialized
-        start_scheduler(app) # Pass the app instance here
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-    return app
+# Copy the rest of the application's code to the working directory
+COPY . .
 
-app = create_app()
+# Make port 10000 available to the world outside this container
+EXPOSE 10000
 
-if __name__ == "__main__":
-    # This block is for local development
-    app.run(debug=True)
+# Run the application
+CMD ["gunicorn", "main:create_app()", "--bind", "0.0.0.0:10000"]
