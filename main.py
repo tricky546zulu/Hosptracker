@@ -11,58 +11,11 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        from models import Hospital, HospitalData
         db.create_all()
 
     @app.route('/')
     def index():
         return render_template('index.html')
-
-    @app.route('/history')
-    def history():
-        return render_template('history.html')
-
-    @app.route('/api/hospital-data')
-    def get_hospital_data():
-        from models import Hospital, HospitalData
-        hospitals = Hospital.query.all()
-        data = []
-        for hospital in hospitals:
-            latest_data = HospitalData.query.filter_by(hospital_id=hospital.id).order_by(HospitalData.timestamp.desc()).first()
-            if latest_data:
-                data.append({
-                    'code': hospital.code,
-                    'name': hospital.name,
-                    'timestamp': latest_data.timestamp.isoformat(),
-                    'inpatient_beds': latest_data.inpatient_beds,
-                    'overcapacity_beds': latest_data.overcapacity_beds,
-                    'total_patients': latest_data.total_patients,
-                    'waiting_for_inpatient_bed': latest_data.waiting_for_inpatient_bed
-                })
-        return jsonify(data)
-
-    @app.route('/api/hospital-history/<hospital_code>')
-    def get_hospital_history(hospital_code):
-        from models import Hospital, HospitalData
-        days = request.args.get('days', 7, type=int)
-        from datetime import datetime, timedelta
-        end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=days)
-
-        hospital = Hospital.query.filter_by(code=hospital_code).first()
-        if not hospital:
-            return jsonify({"error": "Hospital not found"}), 404
-
-        history_data = HospitalData.query.filter(
-            HospitalData.hospital_id == hospital.id,
-            HospitalData.timestamp >= start_date
-        ).order_by(HospitalData.timestamp.asc()).all()
-
-        return jsonify([{
-            'timestamp': d.timestamp.isoformat(),
-            'total_patients': d.total_patients,
-            'waiting_for_inpatient_bed': d.waiting_for_inpatient_bed
-        } for d in history_data])
 
     @app.route('/api/weather')
     def get_weather():
