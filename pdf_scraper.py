@@ -1,8 +1,7 @@
 import os
 import re
-import requests
+import subprocess
 import pdfplumber
-from io import BytesIO
 from datetime import datetime
 from models import db, Hospital, HospitalData, ScrapingLog
 
@@ -23,20 +22,24 @@ def run_scraping(app):
     Scrapes hospital capacity data from a PDF and stores it in the database.
     """
     pdf_url = "https://www.saskhealthauthority.ca/sites/default/files/2024-07/ER-Capacity-Report.pdf"
-    print("Starting hospital data scraping with pdfplumber")
+    local_pdf_path = "/tmp/ER-Capacity-Report.pdf"
+    print("Starting hospital data scraping with curl and pdfplumber")
 
     try:
-        # Bypassing SSL verification as a last resort for this specific site
-        response = requests.get(pdf_url, verify=False)
-        response.raise_for_status()
-        pdf_file = BytesIO(response.content)
+        # Use curl to download the PDF, bypassing SSL verification with the -k flag
+        subprocess.run(
+            ["curl", "-k", "-L", "-o", local_pdf_path, pdf_url],
+            check=True,
+            capture_output=True,
+            text=True
+        )
 
-        with pdfplumber.open(pdf_file) as pdf:
+        with pdfplumber.open(local_pdf_path) as pdf:
             page = pdf.pages[0]
             text = page.extract_text()
 
         if not text:
-            raise ValueError("Could not extract text from the PDF.")
+            raise ValueError("Could not extract text from the downloaded PDF.")
 
         last_update_match = re.search(r"Last Update: (\w+\s+\d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2} [ap]\.m\.)", text)
         if not last_update_match:
@@ -92,12 +95,22 @@ def run_scraping(app):
             print(log_message)
             log_scraping_attempt(app, "success", log_message)
 
+    except subprocess.CalledProcessError as e:
+        error_message = f"Error downloading PDF with curl: {e.stderr}"
+        print(error_message)
+        log_scraping_attempt(app, "error", error_message)
+        with app.app_context():
+            db.session.rollback()
     except Exception as e:
         error_message = f"Error scraping hospital data: {e}"
         print(error_message)
         log_scraping_attempt(app, "error", error_message)
         with app.app_context():
             db.session.rollback()
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(local_pdf_path):
+            os.remove(local_pdf_path)
 
 if __name__ == "__main__":
     from main import create_app
