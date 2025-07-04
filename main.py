@@ -1,3 +1,4 @@
+```python
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
@@ -102,6 +103,7 @@ def create_app():
 
     return app
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
