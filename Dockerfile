@@ -1,12 +1,14 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Install system dependencies required for pdfplumber and other libraries
+# Install system dependencies and update certificate store
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libmagic-dev \
     libpoppler-cpp-dev \
     ghostscript \
+    ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
