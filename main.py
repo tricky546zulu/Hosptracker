@@ -1,10 +1,7 @@
 from flask import Flask, jsonify, render_template, request
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect
+from extensions import db
 import os
 import requests
-
-db = SQLAlchemy()
 
 def create_app():
     """Creates and configures a Flask application."""
@@ -14,10 +11,10 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
+        # We import models here to avoid circular import issues
         from models import Hospital, HospitalData, ScrapingLog
         db.create_all()
 
-        # Import and start the scheduler after the app is created
         from scheduler import start_scheduler
         start_scheduler(app)
 
